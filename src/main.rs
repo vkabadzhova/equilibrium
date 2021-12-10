@@ -4,6 +4,7 @@ mod fluid;
 //use fluid;
 
 fn main() {
-    fluid::fluid_simulation();
+    let simulator: fluid::FluidSimulator = fluid::FluidSimulator{..Default::default()};
+    simulator.fluid_simulation();
     println!("Hello world!");
 }
