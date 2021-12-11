@@ -94,37 +94,119 @@ impl FluidSimulator {
     fn lin_solve(&self, b: i32, x: &mut Vec<f32>, x0: &Vec<f32>, a: f32, c: f32) {
         let c_recip = 1.0 / c;
         for k in 0..self.iter {
-            for j in 1..N-1 {
-                for i in 1..N-1 {
-                    x[Fluid::IX(i, j)] = (x0[Fluid::IX(i, j)] 
-                        + a * (x[Fluid::IX(i+1, j)]
-                            + x[Fluid::IX(i-1, j)]
-                            + x[Fluid::IX(i, j+1)]
-                            + x[Fluid::IX(i, j-1)]
-                        )) * c_recip;
+            for j in 1..N - 1 {
+                for i in 1..N - 1 {
+                    x[Fluid::IX(i, j)] = (x0[Fluid::IX(i, j)]
+                        + a * (x[Fluid::IX(i + 1, j)]
+                            + x[Fluid::IX(i - 1, j)]
+                            + x[Fluid::IX(i, j + 1)]
+                            + x[Fluid::IX(i, j - 1)]))
+                        * c_recip;
                 }
             }
         }
     }
 
-    fn project(&self, velocX: &Vec<f32>, velocY: &Vec<f32>, p: &Vec<f32>, div: &Vec<f32>){}
-    fn advect(&self, b: u32, d: &Vec<f32>, d0: &Vec<f32>, velocX: &Vec<f32>, velocY: &Vec<f32>, dt: &f32) {}
+    fn project(&self, velocX: &Vec<f32>, velocY: &Vec<f32>, p: &Vec<f32>, div: &Vec<f32>) {}
+    fn advect(
+        &self,
+        b: u32,
+        d: &Vec<f32>,
+        d0: &Vec<f32>,
+        velocX: &Vec<f32>,
+        velocY: &Vec<f32>,
+        dt: &f32,
+    ) {
+    }
 
     fn step(&self, fluid: &mut Fluid) {
         //TODO: DOUBLE CHECK THIS MUTABLITY PASSING - is this &mut OK?
-        self.diffuse(1, &mut fluid.Vx0, &fluid.Vx, &fluid.fluid_configs.viscousity, &fluid.fluid_configs.dt); 
-        self.diffuse(2, &mut fluid.Vx0, &fluid.Vx, &fluid.fluid_configs.viscousity, &fluid.fluid_configs.dt); 
+        self.diffuse(
+            1,
+            &mut fluid.Vx0,
+            &fluid.Vx,
+            &fluid.fluid_configs.viscousity,
+            &fluid.fluid_configs.dt,
+        );
+        self.diffuse(
+            2,
+            &mut fluid.Vx0,
+            &fluid.Vx,
+            &fluid.fluid_configs.viscousity,
+            &fluid.fluid_configs.dt,
+        );
 
         // TODO: refactor, store Vx, Vy together
-        self.project(&fluid.Vx0, &fluid.Vy0, &fluid.Vx, &fluid.Vy);  
+        self.project(&fluid.Vx0, &fluid.Vy0, &fluid.Vx, &fluid.Vy);
 
-        self.advect(1, &fluid.Vx, &fluid.Vx0, &fluid.Vx0, &fluid.Vy0, &fluid.fluid_configs.dt); 
-        self.advect(2, &fluid.Vy, &fluid.Vy0, &fluid.Vx0, &fluid.Vy0, &fluid.fluid_configs.dt); 
-        
-        self.project(&fluid.Vx, &fluid.Vy, &fluid.Vx0, &fluid.Vy0);  
+        self.advect(
+            1,
+            &fluid.Vx,
+            &fluid.Vx0,
+            &fluid.Vx0,
+            &fluid.Vy0,
+            &fluid.fluid_configs.dt,
+        );
+        self.advect(
+            2,
+            &fluid.Vy,
+            &fluid.Vy0,
+            &fluid.Vx0,
+            &fluid.Vy0,
+            &fluid.fluid_configs.dt,
+        );
 
-        self.diffuse(0, &mut fluid.s, &fluid.density, &fluid.fluid_configs.diffusion, &fluid.fluid_configs.dt); 
-        self.advect(0, &fluid.density, &fluid.s, &fluid.Vx, &fluid.Vy, &fluid.fluid_configs.dt); 
+        self.project(&fluid.Vx, &fluid.Vy, &fluid.Vx0, &fluid.Vy0);
+
+        self.diffuse(
+            0,
+            &mut fluid.s,
+            &fluid.density,
+            &fluid.fluid_configs.diffusion,
+            &fluid.fluid_configs.dt,
+        );
+        self.advect(
+            0,
+            &fluid.density,
+            &fluid.s,
+            &fluid.Vx,
+            &fluid.Vy,
+            &fluid.fluid_configs.dt,
+        );
+    }
+
+    fn set_bondaries(b: u32, x: &mut Vec<f32>) {
+        //TODO: Refactor
+        for i in 1..N - 1 {
+            x[Fluid::IX(i, 0)] = if b == 2 {
+                -x[Fluid::IX(i, 1)]
+            } else {
+                x[Fluid::IX(i, 1)]
+            };
+            x[Fluid::IX(i, N - 1)] = if b == 2 {
+                -x[Fluid::IX(i, N - 2)]
+            } else {
+                x[Fluid::IX(i, N - 2)]
+            };
+        }
+
+        for j in 1..N - 1 {
+            x[Fluid::IX(0, j)] = if b == 1 {
+                -x[Fluid::IX(1, j)]
+            } else {
+                x[Fluid::IX(1, j)]
+            };
+            x[Fluid::IX(N - 1, j)] = if b == 1 {
+                -x[Fluid::IX(N - 2, j)]
+            } else {
+                x[Fluid::IX(N - 2, j)]
+            };
+        }
+
+        x[Fluid::IX(0, 0)] = 0.5 * (x[Fluid::IX(1, 0)] + x[Fluid::IX(0, 1)]);
+        x[Fluid::IX(0, N - 1)] = 0.5 * (x[Fluid::IX(1, N - 1)] + x[Fluid::IX(0, N - 2)]);
+        x[Fluid::IX(N - 1, 0)] = 0.5 * (x[Fluid::IX(N - 2, 0)] + x[Fluid::IX(N - 1, 1)]);
+        x[Fluid::IX(N - 1, N - 1)] = 0.5 * (x[Fluid::IX(N - 2, N - 1)] + x[Fluid::IX(N - 1, N - 2)]);
     }
 
     pub fn fluid_simulation(&self) {
