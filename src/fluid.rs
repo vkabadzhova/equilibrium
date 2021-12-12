@@ -2,8 +2,13 @@ extern crate image;
 extern crate nalgebra_glm as glm;
 extern crate rand;
 
+//use geo::algorithm::rotate::RotatePoint;
+//use geo::{line_string, point};
 use geo::algorithm::rotate::RotatePoint;
 use geo::{line_string, point};
+//use geo::{Coordinate, LineString, Point};
+use noise::{NoiseFn, Perlin};
+use rand::Rng;
 
 static N: u32 = 128;
 
@@ -56,19 +61,19 @@ impl Fluid {
         (new_x + (new_y * N)) as usize
     }
 
-    fn add_density(mut self, x: u32, y: u32, amount: f32) {
+    fn add_density(&mut self, x: u32, y: u32, amount: f32) {
         let idx: usize = Self::IX(x, y);
         self.density[idx] += amount;
     }
 
-    fn add_velocity(mut self, x: u32, y: u32, amountX: f32, amountY: f32) {
+    fn add_velocity(&mut self, x: u32, y: u32, amountX: f32, amountY: f32) {
         let idx: usize = Self::IX(x, y);
         self.Vx[idx] += amountX;
         self.Vy[idx] += amountY;
     }
 
     //fn renderD(&self, imgbuf: image::ImageBuffer<RGB<u16>, Vec<RGB<u16>>>, frame_number: u64) {
-    fn renderD(&self, imgbuf: &mut image::RgbImage, frame_number: u64) {
+    fn renderD(&self, imgbuf: &mut image::RgbImage, frame_number: u32) {
         // TODO: arg: image buffer
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.density[Fluid::IX(x, y)];
@@ -257,6 +262,7 @@ impl FluidSimulator {
         FluidSimulator::set_boundaries(b, d);
     }
 
+    //TODO: move to Fluid
     fn step(&self, fluid: &mut Fluid) {
         //TODO: DOUBLE CHECK THIS MUTABLITY PASSING - is this &mut OK?
         self.diffuse(
@@ -314,23 +320,22 @@ impl FluidSimulator {
     }
 
     fn init_density_and_velocities(fluid: &mut Fluid) {
-        let width = (rand::thread_rng().gen_range(0, N)).abs();
-        let height = (rand::thread_rng().gen_range(0, N)).abs();
-
-        let cx = (0.5 * width).floor();
-        let cy = (0.5 * height).floor();
-        for i in range - 1..1 {
-            for j in range - 1..1 {
-                fluid.add_density(cx + i, cy + j, rand::thread_rng().gen_range(50, 150));
-            }
-        }
+        //TODO
+        //let width = rand::thread_rng().gen_range(0..N);
+        //let height = rand::thread_rng().get_range(0..N);
+        //let cx = (0.5 * width as f32).floor();
+        //let cy = (0.5 * height as f32).floor();
+        //for i in 1..1 {
+        //    for j in 1..1 {
+        //        fluid.add_density(cx + i, cy + j, rand::thread_rng().get_range(50..150));
+        //    }
+        //}
     }
 
     pub fn fluid_simulation(&mut self) {
         //Set up
-        let t: f32 = 0f32;
 
-        let fluid = Fluid::new(FluidConfig {
+        let mut fluid = Fluid::new(FluidConfig {
             dt: 0.2,
             diffusion: 0f32,
             viscousity: 0.0000001,
@@ -339,32 +344,46 @@ impl FluidSimulator {
 
         // draw
         for i in 0..self.iter {
-            let width = (rand::thread_rng().gen_range(0, N)).abs();
-            let height = (rand::thread_rng().gen_range(0, N)).abs();
+            let width: u32 = rand::thread_rng().gen_range(0..N);
+            let height: u32 = rand::thread_rng().gen_range(0..N);
 
-            let cx = (0.5 * width).floor();
-            let cy = (0.5 * height).floor();
-            for x in range - 1..1 {
-                for y in range - 1..1 {
-                    rluid.add_density(cx + x, cy + y, rand::thread_rng().gen_range(50, 150));
+            let cx: u32 = (0.5 * width as f32).floor() as u32;
+            let cy: u32 = (0.5 * height as f32).floor() as u32;
+            for x in 1..1 {
+                for y in 1..1 {
+                    fluid.add_density(cx + x, cy + y, rand::thread_rng().gen_range(50..150) as f32);
                 }
             }
 
             for j in 0..2 {
                 let perlin = Perlin::new();
-                let angle = perlin.get(self.t) * glm::two_pi() * 2;
+                let t_f64: f64 = self.t as f64;
 
-                let ls = line_string![(x: N / 2, y: N / 2), (x: cx, y: cy),];
+                //TODO: Refactor with 2pi:
+                //let angle: f64 = perlin.get([t_f64, t_f64]) * glm::two_pi() * 2;
+                let angle: f64 = perlin.get([t_f64, t_f64]) * 6.28 * 2f64;
 
-                let rotated = ls.rotate_around_point(angle, point!(x: N / 2, y: N / 2));
+                //let linestring = LineString(vec![Point::new(N / 2, N / 2), Point::new(cx, cy)]);
+
+                //let linestring = LineString(vec![
+                //    { N / 2, N / 2 },
+                //    { cx, cy }
+                //]);
+
+                let ls = line_string![(x: (N / 2) as f32, y: (N / 2) as f32), (x: cx as f32, y: cy as f32)];
+                let rotated = ls.rotate_around_point(
+                    angle as f32,
+                    point!(x: (N / 2) as f32, y: (N / 2) as f32),
+                );
+
                 self.t += 0.01;
 
-                fluid.add_velocity(cx, cy, rotated.x, rotated.y);
+                fluid.add_velocity(cx, cy, rotated[1].x as f32, rotated[1].y as f32);
             }
 
-            self.step();
+            self.step(&mut fluid);
             let mut imgbuf = image::ImageBuffer::new(N, N);
-            fluid.renderD(imgbuf, i);
+            fluid.renderD(&mut imgbuf, i);
         }
     }
 }
