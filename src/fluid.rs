@@ -2,11 +2,8 @@ extern crate image;
 extern crate nalgebra_glm as glm;
 extern crate rand;
 
-//use geo::algorithm::rotate::RotatePoint;
-//use geo::{line_string, point};
 use geo::algorithm::rotate::RotatePoint;
 use geo::{line_string, point};
-//use geo::{Coordinate, LineString, Point};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
@@ -33,13 +30,12 @@ impl Fluid {
     pub fn new(init: FluidConfig) -> Fluid {
         Fluid {
             fluid_configs: init,
-            // safe because usize is minimum u32, which is N's type
-            s: Vec::with_capacity((N * N) as usize),
-            density: Vec::with_capacity((N * N) as usize),
-            Vx: Vec::with_capacity((N * N) as usize),
-            Vy: Vec::with_capacity((N * N) as usize),
-            Vx0: Vec::with_capacity((N * N) as usize),
-            Vy0: Vec::with_capacity((N * N) as usize),
+            s: vec![0.0; (N * N) as usize],
+            density: vec![0.0; (N * N) as usize],
+            Vx: vec![0.0; (N * N) as usize],
+            Vy: vec![0.0; (N * N) as usize],
+            Vx0: vec![0.0; (N * N) as usize],
+            Vy0: vec![0.0; (N * N) as usize],
         }
     }
 
