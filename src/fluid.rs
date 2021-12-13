@@ -109,6 +109,7 @@ impl Fluid {
     fn renderD(&self, imgbuf: &mut image::RgbImage, frame_number: u32) {
         println!("-----------------------------------------");
         println!(" # Fluid::RENDER_D");
+        println!(" # Frame number: {}", frame_number);
         println!("-----------------------------------------");
         // TODO: arg: image buffer
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
@@ -422,9 +423,13 @@ impl FluidSimulator {
             let cy: u32 = (0.5 * height as f32).floor() as u32;
             println!("cx:{}, cy:{}", cx, cy);
 
-            for x in 1..1 {
-                for y in 1..1 {
-                    fluid.add_density(cx + x, cy + y, rand::thread_rng().gen_range(50..150) as f32);
+            for x in 0..3 {
+                for y in 0..3 {
+                    let x_coef: i32 = x - 1;
+                    let y_coef: i32 = y - 1;
+                    // Safe because sign is reversed after processing u32 -> i32 -> u32
+                    println!("Add density => cx:{}, x_coef:{}, cy:{}, y_coef:{}", cx, x_coef, cy, y_coef);
+                    fluid.add_density((cx as i32 + x_coef) as u32, (cy as i32 + y_coef) as u32, rand::thread_rng().gen_range(50..150) as f32);
                 }
             }
 
