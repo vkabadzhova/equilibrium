@@ -29,27 +29,25 @@ pub struct Fluid {
 impl Fluid {
     pub fn new(init: FluidConfig) -> Fluid {
         Fluid {
+            s: vec![0.0; (&init.size * &init.size) as usize],
+            density: vec![0.0; (&init.size * &init.size) as usize],
+            Vx: vec![0.0; (&init.size * &init.size) as usize],
+            Vy: vec![0.0; (&init.size * &init.size) as usize],
+            Vx0: vec![0.0; (&init.size * &init.size) as usize],
+            Vy0: vec![0.0; (&init.size * &init.size) as usize],
             fluid_configs: init,
-            s: vec![0.0; (N * N) as usize],
-            density: vec![0.0; (N * N) as usize],
-            Vx: vec![0.0; (N * N) as usize],
-            Vy: vec![0.0; (N * N) as usize],
-            Vx0: vec![0.0; (N * N) as usize],
-            Vy0: vec![0.0; (N * N) as usize],
         }
     }
 
     pub fn IX(x: u32, y: u32) -> usize {
         let new_x = match x {
             // TODO: Refactor
-            d if d >= 0 && d <= N - 1 => x,
-            d if d < 0 => 0,
+            d if d <= N - 1 => x,
             _ => N - 1,
         };
         let new_y = match y {
             // TODO: Refactor
-            d if d >= 0 && d <= N - 1 => x,
-            d if d < 0 => 0,
+            d if d <= N - 1 => x,
             _ => N - 1,
         };
 
@@ -58,11 +56,13 @@ impl Fluid {
     }
 
     fn add_density(&mut self, x: u32, y: u32, amount: f32) {
+        println!("Added density => x:{}, y:{}, amount:{}", &x, &y, &amount);
         let idx: usize = Self::IX(x, y);
         self.density[idx] += amount;
     }
 
     fn add_velocity(&mut self, x: u32, y: u32, amountX: f32, amountY: f32) {
+        println!("Added velocity => x:{}, y:{}, amountX:{}, amountY:{}", &x, &y, &amountX, &amountY);
         let idx: usize = Self::IX(x, y);
         self.Vx[idx] += amountX;
         self.Vy[idx] += amountY;
@@ -135,6 +135,9 @@ impl FluidSimulator {
     }
 
     fn diffuse(&self, b: u32, x: &mut Vec<f32>, x0: &Vec<f32>, diff: &f32, dt: &f32) {
+        println!("-----------------------------------------");
+        println!(" # FluidSimulator::DIFFUSE");
+        println!("-----------------------------------------");
         let new_N_float: f32 = (N - 2) as f32;
         let a: f32 = dt * diff * new_N_float * new_N_float;
         // TODO: refactor `as`s
@@ -225,7 +228,8 @@ impl FluidSimulator {
                 //TODO: Refactor - the same code twice
                 x = match x {
                     d if d < 0.5 => 0.5,
-                    d if d > Nfloat + 0.5 => Nfloat + 0.5,
+                    // d if d > Nfloat + 0.5 => Nfloat + 0.5,
+                    d if d > Nfloat + 0.5 => Nfloat - 1.0,
                     _ => x,
                 };
 
@@ -234,7 +238,8 @@ impl FluidSimulator {
 
                 y = match y {
                     d if d < 0.5 => 0.5,
-                    d if d > Nfloat + 0.5 => Nfloat + 0.5,
+                    // d if d > Nfloat + 0.5 => Nfloat + 0.5,
+                    d if d > Nfloat + 0.5 => Nfloat - 1.0,
                     _ => y,
                 };
 
@@ -244,10 +249,12 @@ impl FluidSimulator {
                 s1 = x - i0;
                 s0 = 1.0 - s1;
                 t1 = y - j0;
-                t0 = 1.9 - t1;
+                t0 = 1.0 - t1;
 
                 let (i0_int, i1_int) = (i0 as u32, i1 as u32);
                 let (j0_int, j1_int) = (j0 as u32, j1 as u32);
+
+                println!("i: {}, j:{}, i0: {}, j0:{}, i1: {}, j1:{}", i, j, i0, j0, i1, j1);
 
                 d[Fluid::IX(i, j)] = s0
                     * (t0 * d0[Fluid::IX(i0_int, j0_int)] + t1 * d0[Fluid::IX(i0_int, j1_int)])
@@ -260,7 +267,9 @@ impl FluidSimulator {
 
     //TODO: move to Fluid
     fn step(&self, fluid: &mut Fluid) {
-        //TODO: DOUBLE CHECK THIS MUTABLITY PASSING - is this &mut OK?
+        println!("-----------------------------------------");
+        println!(" # FluidSimulator::STEP");
+        println!("-----------------------------------------");
         self.diffuse(
             1,
             &mut fluid.Vx0,
@@ -329,6 +338,10 @@ impl FluidSimulator {
     }
 
     pub fn fluid_simulation(&mut self) {
+        println!("-----------------------------------------");
+        println!(" # FluidSimulator::FLUID_SIMULATION");
+        println!("-----------------------------------------");
+
         //Set up
 
         let mut fluid = Fluid::new(FluidConfig {
@@ -340,11 +353,14 @@ impl FluidSimulator {
 
         // draw
         for i in 0..self.iter {
+            println!("Iteration: {}", i);
             let width: u32 = rand::thread_rng().gen_range(0..N);
             let height: u32 = rand::thread_rng().gen_range(0..N);
 
             let cx: u32 = (0.5 * width as f32).floor() as u32;
             let cy: u32 = (0.5 * height as f32).floor() as u32;
+            println!("cx:{}, cy:{}", cx, cy);
+
             for x in 1..1 {
                 for y in 1..1 {
                     fluid.add_density(cx + x, cy + y, rand::thread_rng().gen_range(50..150) as f32);
@@ -358,6 +374,7 @@ impl FluidSimulator {
                 //TODO: Refactor with 2pi:
                 //let angle: f64 = perlin.get([t_f64, t_f64]) * glm::two_pi() * 2;
                 let angle: f64 = perlin.get([t_f64, t_f64]) * 6.28 * 2f64;
+                println!("Rotation angle: {}", angle);
 
                 //let linestring = LineString(vec![Point::new(N / 2, N / 2), Point::new(cx, cy)]);
 
@@ -371,10 +388,11 @@ impl FluidSimulator {
                     angle as f32,
                     point!(x: (N / 2) as f32, y: (N / 2) as f32),
                 );
+                println!("Rotated point => {}, {}", rotated[1].x as f32, rotated[1].y as f32);
 
                 self.t += 0.01;
 
-                fluid.add_velocity(cx, cy, rotated[1].x as f32, rotated[1].y as f32);
+                fluid.add_velocity(cx, cy, rotated[1].x as f32 * 0.2, rotated[1].y as f32 * 0.2);
             }
 
             self.step(&mut fluid);
