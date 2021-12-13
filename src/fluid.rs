@@ -56,26 +56,67 @@ impl Fluid {
     }
 
     fn add_density(&mut self, x: u32, y: u32, amount: f32) {
+        println!("-----------------------------------------");
+        println!(" # Fluid::ADD_DENSITY");
+        println!("-----------------------------------------");
         println!("Added density => x:{}, y:{}, amount:{}", &x, &y, &amount);
         let idx: usize = Self::IX(x, y);
         self.density[idx] += amount;
     }
 
     fn add_velocity(&mut self, x: u32, y: u32, amountX: f32, amountY: f32) {
-        println!("Added velocity => x:{}, y:{}, amountX:{}, amountY:{}", &x, &y, &amountX, &amountY);
+        println!("-----------------------------------------");
+        println!(" # Fluid::ADD_VELOCITY");
+        println!("-----------------------------------------");
+        println!(
+            "Added velocity => x:{}, y:{}, amountX:{}, amountY:{}",
+            &x, &y, &amountX, &amountY
+        );
         let idx: usize = Self::IX(x, y);
         self.Vx[idx] += amountX;
         self.Vy[idx] += amountY;
     }
 
-    //fn renderD(&self, imgbuf: image::ImageBuffer<RGB<u16>, Vec<RGB<u16>>>, frame_number: u64) {
+    // TODO: make it a test
+    fn check_if_density(imgbuf: &mut image::RgbImage, img_name: &String) {
+        println!("-----------------------------------------");
+        println!(" # Fluid::CHECK_IF_DENSITY");
+        println!("-----------------------------------------");
+        let imgx = N;
+        let imgy = N;
+        let mut num_different_pixels = 0u32;
+        let mut num_same_pixels = 0u32;
+        let first_pixel: &image::Rgb<u8> = imgbuf.get_pixel(0, 0);
+
+        for x in 0..imgx {
+            for y in 0..imgy {
+                let cx = y as f32 - 1.5;
+                let cy = x as f32 - 1.5;
+                
+                let pixel = imgbuf.get_pixel(x, y);
+                if pixel != first_pixel {
+                    println!("different pixel found! x:{}, y:{}", x, y);
+                    num_different_pixels += 1;
+                } else if pixel == first_pixel {
+                    num_same_pixels += 1;
+                }
+            }
+        }
+        println!("Num different pixels: {}", num_different_pixels);
+        println!("Num different pixels: {}", num_same_pixels);
+    }
+
     fn renderD(&self, imgbuf: &mut image::RgbImage, frame_number: u32) {
+        println!("-----------------------------------------");
+        println!(" # Fluid::RENDER_D");
+        println!("-----------------------------------------");
         // TODO: arg: image buffer
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.density[Fluid::IX(x, y)];
             *pixel = image::Rgb([(density as u8 + 50) % 255, 200, density as u8]);
         }
         let img_name = format!("rendered_images/density{}.jpg", frame_number);
+        Self::check_if_density(imgbuf, &img_name);
         imgbuf.save(img_name).unwrap();
     }
 
@@ -169,6 +210,9 @@ impl FluidSimulator {
         p: &mut Vec<f32>,
         div: &mut Vec<f32>,
     ) {
+        println!("-----------------------------------------");
+        println!(" # FluidSimulatioo::PROJECT");
+        println!("-----------------------------------------");
         for j in 1..N - 1 {
             for i in 1..N - 1 {
                 div[Fluid::IX(i, j)] = -0.5
@@ -207,29 +251,38 @@ impl FluidSimulator {
         velocY: &Vec<f32>,
         dt: &f32,
     ) {
+        println!("-----------------------------------------");
+        println!(" # FluidSimulator::ADVECT");
+        println!("-----------------------------------------");
         let (mut i0, mut i1, mut j0, mut j1): (f32, f32, f32, f32);
 
         let dtx: f32 = dt * (N as f32 - 2f32);
         let dty: f32 = dtx;
 
         let (mut s0, mut s1, mut t0, mut t1): (f32, f32, f32, f32);
-        let (mut tmp_x, mut tmp_y, mut x, mut y): (f32, f32, f32, f32);
+        let (mut x, mut y): (f32, f32);
 
         let Nfloat: f32 = N as f32;
+        println!("Nfloat: {}", Nfloat);
 
         // DOUBLE CHECK THIS
         for j in 1..N - 1 {
             for i in 1..N - 1 {
-                tmp_x = dtx * velocX[Fluid::IX(i, j)];
-                tmp_y = dty * velocY[Fluid::IX(i, j)];
-                x = i as f32 - tmp_x;
-                y = j as f32 - tmp_y;
+                x = i as f32 - dtx * velocX[Fluid::IX(i, j)];
+                y = j as f32 - dty * velocY[Fluid::IX(i, j)];
+                println!(
+                    "x: {}, y:{}, velocX: {}, velocY:{}",
+                    x,
+                    y,
+                    velocX[Fluid::IX(i, j)],
+                    velocY[Fluid::IX(i, j)]
+                );
 
                 //TODO: Refactor - the same code twice
                 x = match x {
                     d if d < 0.5 => 0.5,
-                    // d if d > Nfloat + 0.5 => Nfloat + 0.5,
-                    d if d > Nfloat + 0.5 => Nfloat - 1.0,
+                    d if d > Nfloat + 0.5 => Nfloat + 0.5,
+                    //d if d >= Nfloat => Nfloat - 1.0,
                     _ => x,
                 };
 
@@ -238,8 +291,8 @@ impl FluidSimulator {
 
                 y = match y {
                     d if d < 0.5 => 0.5,
-                    // d if d > Nfloat + 0.5 => Nfloat + 0.5,
-                    d if d > Nfloat + 0.5 => Nfloat - 1.0,
+                    d if d > Nfloat + 0.5 => Nfloat + 0.5,
+                    // d if d >= Nfloat => Nfloat - 1.0,
                     _ => y,
                 };
 
@@ -254,8 +307,16 @@ impl FluidSimulator {
                 let (i0_int, i1_int) = (i0 as u32, i1 as u32);
                 let (j0_int, j1_int) = (j0 as u32, j1 as u32);
 
-                println!("i: {}, j:{}, i0: {}, j0:{}, i1: {}, j1:{}", i, j, i0, j0, i1, j1);
+                println!(
+                    "i: {}, j:{}, i0: {}, j0:{}, i1: {}, j1:{}",
+                    i, j, i0, j0, i1, j1
+                );
 
+                if i1 > Nfloat || j1 > Nfloat {
+                    //TODO: Refactor - works only for 0 degrees
+                    d[Fluid::IX(i, j)] = d[Fluid::IX(i - 1, j)];
+                    break;
+                }
                 d[Fluid::IX(i, j)] = s0
                     * (t0 * d0[Fluid::IX(i0_int, j0_int)] + t1 * d0[Fluid::IX(i0_int, j1_int)])
                     + s1 * (t0 * d0[Fluid::IX(i1_int, j0_int)]
@@ -368,6 +429,7 @@ impl FluidSimulator {
             }
 
             for j in 0..2 {
+                /* TODO: add perlin noise angle for more beauty
                 let perlin = Perlin::new();
                 let t_f64: f64 = self.t as f64;
 
@@ -393,6 +455,10 @@ impl FluidSimulator {
                 self.t += 0.01;
 
                 fluid.add_velocity(cx, cy, rotated[1].x as f32 * 0.2, rotated[1].y as f32 * 0.2);
+                */
+                self.t += 0.01;
+
+                fluid.add_velocity(cx, cy, cx as f32 * 0.2, cy as f32 * 0.2);
             }
 
             self.step(&mut fluid);
