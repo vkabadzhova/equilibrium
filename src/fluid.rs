@@ -181,12 +181,12 @@ impl FluidSimulator {
             0.5 * (x[Fluid::IX(N - 2, N - 1)] + x[Fluid::IX(N - 1, N - 2)]);
     }
 
-    fn diffuse(&self, b: u32, x: &mut Vec<f32>, x0: &Vec<f32>, diff: &f32, dt: &f32) {
+    fn diffuse(&self, b: u32, x: &mut Vec<f32>, x0: &Vec<f32>, diffusion: &f32, dt: &f32) {
         dbg!("-----------------------------------------");
         dbg!(" # FluidSimulator::DIFFUSE");
         dbg!("-----------------------------------------");
         let new_N_float: f32 = (N - 2) as f32;
-        let a: f32 = dt * diff * new_N_float * new_N_float;
+        let a: f32 = dt * diffusion * new_N_float * new_N_float;
         self.lin_solve(b, x, x0, a, 1 as f32 + 4 as f32 * a);
     }
 
@@ -369,13 +369,14 @@ impl FluidSimulator {
 
         // self.project(&mut fluid.Vx, &mut fluid.Vy, &mut fluid.Vx0, &mut fluid.Vy0);
 
-        // self.diffuse(
-        //     0,
-        //     &mut fluid.s,
-        //     &fluid.density,
-        //     &fluid.fluid_configs.diffusion,
-        //     &fluid.fluid_configs.dt,
-        // );
+        self.diffuse(
+            0,
+            &mut fluid.s,
+            &fluid.density,
+            &fluid.fluid_configs.diffusion,
+            &fluid.fluid_configs.dt,
+        );
+
         self.advect(
             0,
             &mut fluid.density,
@@ -456,11 +457,9 @@ impl FluidSimulator {
     }
 
     fn init_velocities(fluid: &mut Fluid) {
-        // for j in N / 2 - 10..=N / 2 + 10 {
-        //     for i in N / 2 - 10..=N / 2 + 10 {
-        //         fluid.add_velocity(i, j, 2 as f32 * 0.2, 3 as f32 * 0.2);
-        //     }
-        // }
+        dbg!("-----------------------------------------");
+        dbg!(" # FluidSimulator::INIT_VELOCITY");
+        dbg!("-----------------------------------------");
 
         for j in 0..N {
             for i in 0..N {
@@ -476,7 +475,7 @@ impl FluidSimulator {
 
         //Set up
         let mut fluid = Fluid::new(FluidConfig {
-            dt: 0.05,
+            dt: 0.02,
             //TODO: SET DIFFUSION!
             diffusion: 0f32,
             viscousity: 0.0000001,
