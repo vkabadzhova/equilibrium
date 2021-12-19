@@ -47,7 +47,7 @@ impl Fluid {
         };
         let new_y = match y {
             // TODO: Refactor
-            d if d <= N - 1 => x,
+            d if d <= N - 1 => y,
             _ => N - 1,
         };
 
@@ -117,7 +117,9 @@ impl Fluid {
         // TODO: arg: image buffer
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.density[Fluid::IX(x, y)];
-            // dbg!(x, y, density);
+            if (density != 0.0) {
+                dbg!(x, y, density);
+            }
             *pixel = image::Rgb([(density * 255.0) as u8, 200, density as u8]);
         }
         let img_name = format!("rendered_images/density{}.jpg", frame_number);
@@ -449,6 +451,13 @@ impl FluidSimulator {
                 fluid.add_density(i, j, 0.9);
             }
         }
+
+        // for j in 0..N {
+        //     for i in 0..N {
+        //         if (fluid.density)
+        //     }
+        // }
+
     }
 
     fn init_velocities(fluid: &mut Fluid) {
