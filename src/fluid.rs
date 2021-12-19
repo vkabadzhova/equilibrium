@@ -135,7 +135,7 @@ pub struct FluidSimulator {
 impl Default for FluidSimulator {
     fn default() -> FluidSimulator {
         FluidSimulator {
-            iter: 30,
+            iter: 16,
             scale: 4,
             t: 0f32,
         }
@@ -318,9 +318,11 @@ impl FluidSimulator {
                     densities[Fluid::IX(i, j)] = densities[Fluid::IX(i - 1, j)];
                     break;
                 }
-                densities[Fluid::IX(i, j)] = 
-                    s0 * (t0 * densities0[Fluid::IX(i0_int, j0_int)] + t1 * densities0[Fluid::IX(i0_int, j1_int)]) + 
-                    s1 * (t0 * densities0[Fluid::IX(i1_int, j0_int)] + t1 * densities0[Fluid::IX(i1_int, j1_int)]);
+                densities[Fluid::IX(i, j)] = s0
+                    * (t0 * densities0[Fluid::IX(i0_int, j0_int)]
+                        + t1 * densities0[Fluid::IX(i0_int, j1_int)])
+                    + s1 * (t0 * densities0[Fluid::IX(i1_int, j0_int)]
+                        + t1 * densities0[Fluid::IX(i1_int, j1_int)]);
             }
         }
         FluidSimulator::set_boundaries(boundary, densities);
@@ -382,14 +384,13 @@ impl FluidSimulator {
             &fluid.Vy,
             &fluid.fluid_configs.dt,
         );
-        
-        fluid.s = fluid.density.clone();
 
+        fluid.s = fluid.density.clone();
     }
 
-    fn init_densitities_velocities(&mut self, width: u32, height: u32, fluid: &mut Fluid) {
-        let cx: u32 = (0.5 * width as f32).floor() as u32;
-        let cy: u32 = (0.5 * height as f32).floor() as u32;
+    fn init_densitities_velocities(&mut self, fluid: &mut Fluid) {
+        let cx: u32 = (0.5 * N as f32).floor() as u32;
+        let cy: u32 = (0.5 * N as f32).floor() as u32;
         dbg!("cx:{}, cy:{}", cx, cy);
 
         for x in 0..=2 {
@@ -414,11 +415,11 @@ impl FluidSimulator {
             }
         }
 
-        // let perlin = Perlin::new();
-        // let t_f64: f64 = self.t as f64;
+        let perlin = Perlin::new();
+        let t_f64: f64 = self.t as f64;
 
-        //TODO: Refactor with 2pi:
-        //let angle: f64 = perlin.get([t_f64, t_f64]) * glm::two_pi() * 2;
+        // // TODO: Refactor with 2pi:
+        // // let angle: f64 = perlin.get([t_f64, t_f64]) * glm::two_pi() * 2;
         // let angle: f64 = perlin.get([t_f64, t_f64]) * 6.28 * 2f64;
         // dbg!("Rotation angle: {}", angle);
 
@@ -465,6 +466,33 @@ impl FluidSimulator {
         }
     }
 
+    fn add_noise(&mut self, fluid: &mut Fluid) {
+        let perlin = Perlin::new();
+        let t_f64: f64 = self.t as f64;
+
+        let angle: f64 = perlin.get([t_f64, t_f64]) * 6.28 * 2f64;
+        let rand_x = rand::thread_rng().gen_range(0..N);
+        let rand_y = rand::thread_rng().gen_range(0..N);
+
+        let (center_point, rotating_point) = (
+            point!(x: (N/2) as f32, y: (N/2) as f32),
+            point!(x: rand_x as f32, y: rand_y as f32),
+        );
+
+        let ls =
+            line_string![(x: (N/2) as f32, y: (N/2) as f32), (x: rand_x as f32, y: rand_y as f32)];
+
+        // let ls =
+        //     line_string![center_point, rotating_point];
+
+        let rotated =
+            ls.rotate_around_point(angle as f32, center_point);
+
+        self.t += 0.01;
+
+        fluid.add_velocity(center_point.x().trunc() as u32, center_point.y().trunc() as u32, rotated[1].x as f32 * 2.0, rotated[1].y as f32 * 2.0);
+    }
+
     pub fn fluid_simulation(&mut self) {
         dbg!("-----------------------------------------");
         dbg!(" # FluidSimulator::FLUID_SIMULATION");
@@ -479,14 +507,14 @@ impl FluidSimulator {
             size: 128,
         });
 
+        // self.init_densitities_velocities(&mut fluid);
         FluidSimulator::init_velocities(&mut fluid);
         FluidSimulator::init_densitity(&mut fluid);
 
         // draw
         for i in 0..self.iter {
             dbg!("Iteration: {}", i);
-
-            // self.init_densitities_velocities(width, height, &mut fluid);
+            self.add_noise(&mut fluid);
 
             self.step(&mut fluid);
             let mut imgbuf = image::ImageBuffer::new(N, N);
