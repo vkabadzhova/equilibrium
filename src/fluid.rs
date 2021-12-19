@@ -70,7 +70,10 @@ impl Fluid {
         dbg!("-----------------------------------------");
         dbg!(
             "Added velocity => x:{}, y:{}, amountX:{}, amountY:{}",
-            &x, &y, &amountX, &amountY
+            &x,
+            &y,
+            &amountX,
+            &amountY
         );
         let idx: usize = Self::IX(x, y);
         self.Vx[idx] += amountX;
@@ -114,10 +117,11 @@ impl Fluid {
         // TODO: arg: image buffer
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.density[Fluid::IX(x, y)];
-            *pixel = image::Rgb([(density as u8) % 255, 200, density as u8]);
+            // dbg!(x, y, density);
+            *pixel = image::Rgb([(density * 255.0) as u8, 200, density as u8]);
         }
         let img_name = format!("rendered_images/density{}.jpg", frame_number);
-        Self::check_if_density(imgbuf, &img_name);
+        // Self::check_if_density(imgbuf, &img_name);
         imgbuf.save(img_name).unwrap();
     }
 }
@@ -279,8 +283,8 @@ impl FluidSimulator {
                 //TODO: Refactor - the same code twice
                 x = match x {
                     d if d < 0.5 => 0.5,
-                    d if d > Nfloat + 0.5 => Nfloat + 0.5,
-                    //d if d >= Nfloat => Nfloat - 1.0,
+                    // d if d > Nfloat + 0.5 => Nfloat + 0.5,
+                    d if d >= Nfloat => Nfloat - 1.0,
                     _ => x,
                 };
 
@@ -289,8 +293,8 @@ impl FluidSimulator {
 
                 y = match y {
                     d if d < 0.5 => 0.5,
-                    d if d > Nfloat + 0.5 => Nfloat + 0.5,
-                    // d if d >= Nfloat => Nfloat - 1.0,
+                    // d if d > Nfloat + 0.5 => Nfloat + 0.5,
+                    d if d >= Nfloat => Nfloat - 1.0,
                     _ => y,
                 };
 
@@ -310,7 +314,7 @@ impl FluidSimulator {
                     i, j, i0, j0, i1, j1
                 );
 
-                if i1 > Nfloat || j1 > Nfloat {
+                if i1 >= Nfloat || j1 >= Nfloat {
                     //TODO: Refactor - works only for 0 degrees
                     d[Fluid::IX(i, j)] = d[Fluid::IX(i - 1, j)];
                     break;
@@ -324,63 +328,61 @@ impl FluidSimulator {
         FluidSimulator::set_boundaries(b, d);
     }
 
-    //TODO: move to Fluid
     fn step(&self, fluid: &mut Fluid) {
         dbg!("-----------------------------------------");
         dbg!(" # FluidSimulator::STEP");
         dbg!("-----------------------------------------");
-        self.diffuse(
-            1,
-            &mut fluid.Vx0,
-            &fluid.Vx,
-            &fluid.fluid_configs.viscousity,
-            &fluid.fluid_configs.dt,
-        );
-        self.diffuse(
-            2,
-            &mut fluid.Vx0,
-            &fluid.Vx,
-            &fluid.fluid_configs.viscousity,
-            &fluid.fluid_configs.dt,
-        );
+        // self.diffuse(
+        //     1,
+        //     &mut fluid.Vx0,
+        //     &fluid.Vx,
+        //     &fluid.fluid_configs.viscousity,
+        //     &fluid.fluid_configs.dt,
+        // );
+        // self.diffuse(
+        //     2,
+        //     &mut fluid.Vy0,
+        //     &fluid.Vy,
+        //     &fluid.fluid_configs.viscousity,
+        //     &fluid.fluid_configs.dt,
+        // );
 
-        // TODO: refactor, store Vx, Vy together
-        self.project(&mut fluid.Vx0, &mut fluid.Vy0, &mut fluid.Vx, &mut fluid.Vy);
+        // self.project(&mut fluid.Vx0, &mut fluid.Vy0, &mut fluid.Vx, &mut fluid.Vy);
 
-        self.advect(
-            1,
-            &mut fluid.Vx,
-            &fluid.Vx0,
-            &fluid.Vx0,
-            &fluid.Vy0,
-            &fluid.fluid_configs.dt,
-        );
-        self.advect(
-            2,
-            &mut fluid.Vy,
-            &fluid.Vy0,
-            &fluid.Vx0,
-            &fluid.Vy0,
-            &fluid.fluid_configs.dt,
-        );
+        // self.advect(
+        //     1,
+        //     &mut fluid.Vx,
+        //     &fluid.Vx0,
+        //     &fluid.Vx0,
+        //     &fluid.Vy0,
+        //     &fluid.fluid_configs.dt,
+        // );
+        // self.advect(
+        //     2,
+        //     &mut fluid.Vy,
+        //     &fluid.Vy0,
+        //     &fluid.Vx0,
+        //     &fluid.Vy0,
+        //     &fluid.fluid_configs.dt,
+        // );
 
-        self.project(&mut fluid.Vx, &mut fluid.Vy, &mut fluid.Vx0, &mut fluid.Vy0);
+        // self.project(&mut fluid.Vx, &mut fluid.Vy, &mut fluid.Vx0, &mut fluid.Vy0);
 
-        self.diffuse(
-            0,
-            &mut fluid.s,
-            &fluid.density,
-            &fluid.fluid_configs.diffusion,
-            &fluid.fluid_configs.dt,
-        );
-        self.advect(
-            0,
-            &mut fluid.density,
-            &fluid.s,
-            &fluid.Vx,
-            &fluid.Vy,
-            &fluid.fluid_configs.dt,
-        );
+        // self.diffuse(
+        //     0,
+        //     &mut fluid.s,
+        //     &fluid.density,
+        //     &fluid.fluid_configs.diffusion,
+        //     &fluid.fluid_configs.dt,
+        // );
+        // self.advect(
+        //     0,
+        //     &mut fluid.density,
+        //     &fluid.s,
+        //     &fluid.Vx,
+        //     &fluid.Vy,
+        //     &fluid.fluid_configs.dt,
+        // );
     }
 
     fn init_densitities_velocities(&mut self, width: u32, height: u32, fluid: &mut Fluid) {
@@ -394,7 +396,10 @@ impl FluidSimulator {
                 let y_coef: i32 = y - 1;
                 dbg!(
                     "Add density => cx:{}, x_coef:{}, cy:{}, y_coef:{}",
-                    cx, x_coef, cy, y_coef
+                    cx,
+                    x_coef,
+                    cy,
+                    y_coef
                 );
 
                 // Safe because sign is reversed after processing u32 -> i32 -> u32
@@ -402,7 +407,7 @@ impl FluidSimulator {
                     // TODO: When cx == 0 & x_coef = -1, gets out of scope
                     (cx as i32 + x_coef) as u32,
                     (cy as i32 + y_coef) as u32,
-                    rand::thread_rng().gen_range(50..150) as f32,
+                    (rand::thread_rng().gen_range(0..100) / 100) as f32,
                 );
             }
         }
@@ -432,6 +437,28 @@ impl FluidSimulator {
         fluid.add_velocity(cx, cy, cx as f32 * 0.2, cy as f32 * 0.2);
     }
 
+    fn init_densitity(fluid: &mut Fluid) {
+        for j in 0..N {
+            for i in 0..N {
+                fluid.add_density(i, j, 0.0);
+            }
+        }
+
+        for j in N / 2 - 20..=N / 2 + 20 {
+            for i in N / 2 - 20..=N / 2 + 20 {
+                fluid.add_density(i, j, 0.9);
+            }
+        }
+    }
+
+    fn init_velocities(fluid: &mut Fluid) {
+        for j in 0..N {
+            for i in 0..N {
+                fluid.add_velocity(i, j, 2 as f32 * 0.2, 3 as f32 * 0.2);
+            }
+        }
+    }
+
     pub fn fluid_simulation(&mut self) {
         dbg!("-----------------------------------------");
         dbg!(" # FluidSimulator::FLUID_SIMULATION");
@@ -440,21 +467,20 @@ impl FluidSimulator {
         //Set up
         let mut fluid = Fluid::new(FluidConfig {
             dt: 0.2,
+            //TODO: SET DIFFUSION!
             diffusion: 0f32,
             viscousity: 0.0000001,
             size: 128,
         });
 
-        // imitate mouse width and height
-        // start width and height
-        let width: u32 = rand::thread_rng().gen_range(1..N);
-        let height: u32 = rand::thread_rng().gen_range(1..N);
+        // FluidSimulator::init_velocities(&mut fluid);
+        FluidSimulator::init_densitity(&mut fluid);
 
         // draw
         for i in 0..self.iter {
             dbg!("Iteration: {}", i);
 
-            self.init_densitities_velocities(width, height, &mut fluid);
+            // self.init_densitities_velocities(width, height, &mut fluid);
 
             self.step(&mut fluid);
             let mut imgbuf = image::ImageBuffer::new(N, N);
