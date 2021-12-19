@@ -118,9 +118,6 @@ impl Fluid {
         // TODO: arg: image buffer
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.density[Fluid::IX(x, y)];
-            if (density != 0.0) {
-                dbg!(x, y, density);
-            }
             *pixel = image::Rgb([(density * 255.0) as u8, 200, density as u8]);
         }
         let img_name = format!("rendered_images/density{}.jpg", frame_number);
@@ -138,7 +135,7 @@ pub struct FluidSimulator {
 impl Default for FluidSimulator {
     fn default() -> FluidSimulator {
         FluidSimulator {
-            iter: 16,
+            iter: 30,
             scale: 4,
             t: 0f32,
         }
@@ -333,41 +330,41 @@ impl FluidSimulator {
         dbg!("-----------------------------------------");
         dbg!(" # FluidSimulator::STEP");
         dbg!("-----------------------------------------");
-        // self.diffuse(
-        //     1,
-        //     &mut fluid.Vx0,
-        //     &fluid.Vx,
-        //     &fluid.fluid_configs.viscousity,
-        //     &fluid.fluid_configs.dt,
-        // );
-        // self.diffuse(
-        //     2,
-        //     &mut fluid.Vy0,
-        //     &fluid.Vy,
-        //     &fluid.fluid_configs.viscousity,
-        //     &fluid.fluid_configs.dt,
-        // );
+        self.diffuse(
+            1,
+            &mut fluid.Vx0,
+            &fluid.Vx,
+            &fluid.fluid_configs.viscousity,
+            &fluid.fluid_configs.dt,
+        );
+        self.diffuse(
+            2,
+            &mut fluid.Vy0,
+            &fluid.Vy,
+            &fluid.fluid_configs.viscousity,
+            &fluid.fluid_configs.dt,
+        );
 
-        // self.project(&mut fluid.Vx0, &mut fluid.Vy0, &mut fluid.Vx, &mut fluid.Vy);
+        self.project(&mut fluid.Vx0, &mut fluid.Vy0, &mut fluid.Vx, &mut fluid.Vy);
 
-        // self.advect(
-        //     1,
-        //     &mut fluid.Vx,
-        //     &fluid.Vx0,
-        //     &fluid.Vx0,
-        //     &fluid.Vy0,
-        //     &fluid.fluid_configs.dt,
-        // );
-        // self.advect(
-        //     2,
-        //     &mut fluid.Vy,
-        //     &fluid.Vy0,
-        //     &fluid.Vx0,
-        //     &fluid.Vy0,
-        //     &fluid.fluid_configs.dt,
-        // );
+        self.advect(
+            1,
+            &mut fluid.Vx,
+            &fluid.Vx0,
+            &fluid.Vx0,
+            &fluid.Vy0,
+            &fluid.fluid_configs.dt,
+        );
+        self.advect(
+            2,
+            &mut fluid.Vy,
+            &fluid.Vy0,
+            &fluid.Vx0,
+            &fluid.Vy0,
+            &fluid.fluid_configs.dt,
+        );
 
-        // self.project(&mut fluid.Vx, &mut fluid.Vy, &mut fluid.Vx0, &mut fluid.Vy0);
+        self.project(&mut fluid.Vx, &mut fluid.Vy, &mut fluid.Vx0, &mut fluid.Vy0);
 
         self.diffuse(
             0,
