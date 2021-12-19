@@ -56,19 +56,19 @@ impl Fluid {
     }
 
     fn add_density(&mut self, x: u32, y: u32, amount: f32) {
-        println!("-----------------------------------------");
-        println!(" # Fluid::ADD_DENSITY");
-        println!("-----------------------------------------");
-        println!("Added density => x:{}, y:{}, amount:{}", &x, &y, &amount);
+        dbg!("-----------------------------------------");
+        dbg!(" # Fluid::ADD_DENSITY");
+        dbg!("-----------------------------------------");
+        dbg!("Added density => x:{}, y:{}, amount:{}", &x, &y, &amount);
         let idx: usize = Self::IX(x, y);
         self.density[idx] += amount;
     }
 
     fn add_velocity(&mut self, x: u32, y: u32, amountX: f32, amountY: f32) {
-        println!("-----------------------------------------");
-        println!(" # Fluid::ADD_VELOCITY");
-        println!("-----------------------------------------");
-        println!(
+        dbg!("-----------------------------------------");
+        dbg!(" # Fluid::ADD_VELOCITY");
+        dbg!("-----------------------------------------");
+        dbg!(
             "Added velocity => x:{}, y:{}, amountX:{}, amountY:{}",
             &x, &y, &amountX, &amountY
         );
@@ -79,9 +79,9 @@ impl Fluid {
 
     // TODO: make it a test
     fn check_if_density(imgbuf: &mut image::RgbImage, img_name: &String) {
-        println!("-----------------------------------------");
-        println!(" # Fluid::CHECK_IF_DENSITY");
-        println!("-----------------------------------------");
+        dbg!("-----------------------------------------");
+        dbg!(" # Fluid::CHECK_IF_DENSITY");
+        dbg!("-----------------------------------------");
         let imgx = N;
         let imgy = N;
         let mut num_different_pixels = 0u32;
@@ -92,36 +92,34 @@ impl Fluid {
             for y in 0..imgy {
                 let cx = y as f32 - 1.5;
                 let cy = x as f32 - 1.5;
-                
+
                 let pixel = imgbuf.get_pixel(x, y);
                 if pixel != first_pixel {
-                    println!("different pixel found! x:{}, y:{}", x, y);
+                    dbg!("different pixel found! x:{}, y:{}", x, y);
                     num_different_pixels += 1;
                 } else if pixel == first_pixel {
                     num_same_pixels += 1;
                 }
             }
         }
-        println!("Num different pixels: {}", num_different_pixels);
-        println!("Num different pixels: {}", num_same_pixels);
+        dbg!("Num different pixels: {}", num_different_pixels);
+        dbg!("Num different pixels: {}", num_same_pixels);
     }
 
     fn renderD(&self, imgbuf: &mut image::RgbImage, frame_number: u32) {
-        println!("-----------------------------------------");
-        println!(" # Fluid::RENDER_D");
-        println!(" # Frame number: {}", frame_number);
-        println!("-----------------------------------------");
+        dbg!("-----------------------------------------");
+        dbg!(" # Fluid::RENDER_D");
+        dbg!(" # Frame number: {}", frame_number);
+        dbg!("-----------------------------------------");
         // TODO: arg: image buffer
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.density[Fluid::IX(x, y)];
-            *pixel = image::Rgb([(density as u8 + 50) % 255, 200, density as u8]);
+            *pixel = image::Rgb([(density as u8) % 255, 200, density as u8]);
         }
         let img_name = format!("rendered_images/density{}.jpg", frame_number);
         Self::check_if_density(imgbuf, &img_name);
         imgbuf.save(img_name).unwrap();
     }
-
-    //TODO: add renderD, renderV
 }
 
 pub struct FluidSimulator {
@@ -177,12 +175,11 @@ impl FluidSimulator {
     }
 
     fn diffuse(&self, b: u32, x: &mut Vec<f32>, x0: &Vec<f32>, diff: &f32, dt: &f32) {
-        println!("-----------------------------------------");
-        println!(" # FluidSimulator::DIFFUSE");
-        println!("-----------------------------------------");
+        dbg!("-----------------------------------------");
+        dbg!(" # FluidSimulator::DIFFUSE");
+        dbg!("-----------------------------------------");
         let new_N_float: f32 = (N - 2) as f32;
         let a: f32 = dt * diff * new_N_float * new_N_float;
-        // TODO: refactor `as`s
         self.lin_solve(b, x, x0, a, 1 as f32 + 4 as f32 * a);
     }
 
@@ -211,9 +208,9 @@ impl FluidSimulator {
         p: &mut Vec<f32>,
         div: &mut Vec<f32>,
     ) {
-        println!("-----------------------------------------");
-        println!(" # FluidSimulatioo::PROJECT");
-        println!("-----------------------------------------");
+        dbg!("-----------------------------------------");
+        dbg!(" # FluidSimulatioo::PROJECT");
+        dbg!("-----------------------------------------");
         for j in 1..N - 1 {
             for i in 1..N - 1 {
                 div[Fluid::IX(i, j)] = -0.5
@@ -252,9 +249,9 @@ impl FluidSimulator {
         velocY: &Vec<f32>,
         dt: &f32,
     ) {
-        println!("-----------------------------------------");
-        println!(" # FluidSimulator::ADVECT");
-        println!("-----------------------------------------");
+        dbg!("-----------------------------------------");
+        dbg!(" # FluidSimulator::ADVECT");
+        dbg!("-----------------------------------------");
         let (mut i0, mut i1, mut j0, mut j1): (f32, f32, f32, f32);
 
         let dtx: f32 = dt * (N as f32 - 2f32);
@@ -264,14 +261,14 @@ impl FluidSimulator {
         let (mut x, mut y): (f32, f32);
 
         let Nfloat: f32 = N as f32;
-        println!("Nfloat: {}", Nfloat);
+        dbg!("Nfloat: {}", Nfloat);
 
         // DOUBLE CHECK THIS
         for j in 1..N - 1 {
             for i in 1..N - 1 {
                 x = i as f32 - dtx * velocX[Fluid::IX(i, j)];
                 y = j as f32 - dty * velocY[Fluid::IX(i, j)];
-                println!(
+                dbg!(
                     "x: {}, y:{}, velocX: {}, velocY:{}",
                     x,
                     y,
@@ -308,7 +305,7 @@ impl FluidSimulator {
                 let (i0_int, i1_int) = (i0 as u32, i1 as u32);
                 let (j0_int, j1_int) = (j0 as u32, j1 as u32);
 
-                println!(
+                dbg!(
                     "i: {}, j:{}, i0: {}, j0:{}, i1: {}, j1:{}",
                     i, j, i0, j0, i1, j1
                 );
@@ -329,9 +326,9 @@ impl FluidSimulator {
 
     //TODO: move to Fluid
     fn step(&self, fluid: &mut Fluid) {
-        println!("-----------------------------------------");
-        println!(" # FluidSimulator::STEP");
-        println!("-----------------------------------------");
+        dbg!("-----------------------------------------");
+        dbg!(" # FluidSimulator::STEP");
+        dbg!("-----------------------------------------");
         self.diffuse(
             1,
             &mut fluid.Vx0,
@@ -386,26 +383,61 @@ impl FluidSimulator {
         );
     }
 
-    fn init_density_and_velocities(fluid: &mut Fluid) {
-        //TODO
-        //let width = rand::thread_rng().gen_range(0..N);
-        //let height = rand::thread_rng().get_range(0..N);
-        //let cx = (0.5 * width as f32).floor();
-        //let cy = (0.5 * height as f32).floor();
-        //for i in 1..1 {
-        //    for j in 1..1 {
-        //        fluid.add_density(cx + i, cy + j, rand::thread_rng().get_range(50..150));
-        //    }
-        //}
+    fn init_densitities_velocities(&mut self, width: u32, height: u32, fluid: &mut Fluid) {
+        let cx: u32 = (0.5 * width as f32).floor() as u32;
+        let cy: u32 = (0.5 * height as f32).floor() as u32;
+        dbg!("cx:{}, cy:{}", cx, cy);
+
+        for x in 0..=2 {
+            for y in 0..=2 {
+                let x_coef: i32 = x - 1;
+                let y_coef: i32 = y - 1;
+                dbg!(
+                    "Add density => cx:{}, x_coef:{}, cy:{}, y_coef:{}",
+                    cx, x_coef, cy, y_coef
+                );
+
+                // Safe because sign is reversed after processing u32 -> i32 -> u32
+                fluid.add_density(
+                    // TODO: When cx == 0 & x_coef = -1, gets out of scope
+                    (cx as i32 + x_coef) as u32,
+                    (cy as i32 + y_coef) as u32,
+                    rand::thread_rng().gen_range(50..150) as f32,
+                );
+            }
+        }
+
+        // let perlin = Perlin::new();
+        // let t_f64: f64 = self.t as f64;
+
+        //TODO: Refactor with 2pi:
+        //let angle: f64 = perlin.get([t_f64, t_f64]) * glm::two_pi() * 2;
+        // let angle: f64 = perlin.get([t_f64, t_f64]) * 6.28 * 2f64;
+        // dbg!("Rotation angle: {}", angle);
+
+        // let ls = line_string![(x: (N / 2) as f32, y: (N / 2) as f32), (x: cx as f32, y: cy as f32)];
+        // let rotated =
+        //     ls.rotate_around_point(angle as f32, point!(x: (N / 2) as f32, y: (N / 2) as f32));
+        // dbg!(
+        //     "Rotated point => {}, {}",
+        //     rotated[1].x as f32, rotated[1].y as f32
+        // );
+
+        // self.t += 0.01;
+
+        // fluid.add_velocity(cx, cy, rotated[1].x as f32 * 0.2, rotated[1].y as f32 * 0.2);
+
+        self.t += 0.01;
+
+        fluid.add_velocity(cx, cy, cx as f32 * 0.2, cy as f32 * 0.2);
     }
 
     pub fn fluid_simulation(&mut self) {
-        println!("-----------------------------------------");
-        println!(" # FluidSimulator::FLUID_SIMULATION");
-        println!("-----------------------------------------");
+        dbg!("-----------------------------------------");
+        dbg!(" # FluidSimulator::FLUID_SIMULATION");
+        dbg!("-----------------------------------------");
 
         //Set up
-
         let mut fluid = Fluid::new(FluidConfig {
             dt: 0.2,
             diffusion: 0f32,
@@ -413,58 +445,16 @@ impl FluidSimulator {
             size: 128,
         });
 
+        // imitate mouse width and height
+        // start width and height
+        let width: u32 = rand::thread_rng().gen_range(1..N);
+        let height: u32 = rand::thread_rng().gen_range(1..N);
+
         // draw
         for i in 0..self.iter {
-            println!("Iteration: {}", i);
-            let width: u32 = rand::thread_rng().gen_range(0..N);
-            let height: u32 = rand::thread_rng().gen_range(0..N);
+            dbg!("Iteration: {}", i);
 
-            let cx: u32 = (0.5 * width as f32).floor() as u32;
-            let cy: u32 = (0.5 * height as f32).floor() as u32;
-            println!("cx:{}, cy:{}", cx, cy);
-
-            for x in 0..3 {
-                for y in 0..3 {
-                    let x_coef: i32 = x - 1;
-                    let y_coef: i32 = y - 1;
-                    // Safe because sign is reversed after processing u32 -> i32 -> u32
-                    println!("Add density => cx:{}, x_coef:{}, cy:{}, y_coef:{}", cx, x_coef, cy, y_coef);
-                    fluid.add_density((cx as i32 + x_coef) as u32, (cy as i32 + y_coef) as u32, rand::thread_rng().gen_range(50..150) as f32);
-                }
-            }
-
-            for j in 0..2 {
-                /* TODO: add perlin noise angle for more beauty
-                let perlin = Perlin::new();
-                let t_f64: f64 = self.t as f64;
-
-                //TODO: Refactor with 2pi:
-                //let angle: f64 = perlin.get([t_f64, t_f64]) * glm::two_pi() * 2;
-                let angle: f64 = perlin.get([t_f64, t_f64]) * 6.28 * 2f64;
-                println!("Rotation angle: {}", angle);
-
-                //let linestring = LineString(vec![Point::new(N / 2, N / 2), Point::new(cx, cy)]);
-
-                //let linestring = LineString(vec![
-                //    { N / 2, N / 2 },
-                //    { cx, cy }
-                //]);
-
-                let ls = line_string![(x: (N / 2) as f32, y: (N / 2) as f32), (x: cx as f32, y: cy as f32)];
-                let rotated = ls.rotate_around_point(
-                    angle as f32,
-                    point!(x: (N / 2) as f32, y: (N / 2) as f32),
-                );
-                println!("Rotated point => {}, {}", rotated[1].x as f32, rotated[1].y as f32);
-
-                self.t += 0.01;
-
-                fluid.add_velocity(cx, cy, rotated[1].x as f32 * 0.2, rotated[1].y as f32 * 0.2);
-                */
-                self.t += 0.01;
-
-                fluid.add_velocity(cx, cy, cx as f32 * 0.2, cy as f32 * 0.2);
-            }
+            self.init_densitities_velocities(width, height, &mut fluid);
 
             self.step(&mut fluid);
             let mut imgbuf = image::ImageBuffer::new(N, N);
