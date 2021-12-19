@@ -30,7 +30,9 @@ impl FluidCube {
         }
     }
 
-    pub fn constrain(var: u32, from: u32, to: u32) -> u32 {
+    pub fn constrain<T>(var: T, from: T, to: T) -> T 
+    where T: PartialOrd
+    {
         let var = match var {
             d if d < from => from,
             d if d > to => to,
@@ -60,24 +62,34 @@ impl FluidCube {
     }
 
     pub fn step(&mut self) {
-         
-        let N = &self.fluid_configs.size;
-        let visc = &self.fluid_configs.viscousity;
-        let diff = &self.fluid_configs.diffusion;
-        let dt = &self.fluid_configs.dt;
-        let Vx = &self.Vx;
-        let Vy = &self.Vy;
-        let Vx0 =  &self.Vx0;
-        let Vy0 = &self.Vy0;
-        let s = &self.s;
-        let density = &self.density;
+        // let N = &self.fluid_configs.size;
+        // let visc = &self.fluid_configs.viscousity;
+        // let diff = &self.fluid_configs.diffusion;
+        // let dt = &self.fluid_configs.dt;
+        // let Vx = &self.Vx;
+        // let Vy = &self.Vy;
+        // let Vx0 =  &self.Vx0;
+        // let Vy0 = &self.Vy0;
+        // let s = &self.s;
+        // let density = &self.density;
+
+        // self.diffuse_x();
+        // self.diffuse_y();
+
+        // self.project(&mut Vx0, &mut Vy0, &mut Vx, &mut Vy, 4, N);
+
+        // self.advect(1, &mut Vx, Vx0, Vx0, Vy0, dt, N);
+        // self.advect(2, &mut Vy, Vy0, Vx0, Vy0, dt, N);
+
+        // self.project(&mut Vx, &mut Vy, &mut Vx0, &mut Vy0, 4, N);
+
+        // self.diffuse_density();
+        // self.advect(0, density, s, Vx, Vy, dt, N);
 
         self.diffuse_x();
         self.diffuse_y();
-        // self.diffuse(1, &mut Vx0, &Vx, visc, dt, 4, N);
-        // self.diffuse(2, &mut Vy0, Vy, visc, dt, 4, N);
 
-        self.project(&mut Vx0, &mut Vy0, &mut Vx, &mut Vy, 4, N);
+        self.project(&self.Vx0, &mut Vy0, &mut Vx, &mut Vy, 4, N);
 
         self.advect(1, &mut Vx, Vx0, Vx0, Vy0, dt, N);
         self.advect(2, &mut Vy, Vy0, Vx0, Vy0, dt, N);
@@ -85,8 +97,6 @@ impl FluidCube {
         self.project(&mut Vx, &mut Vy, &mut Vx0, &mut Vy0, 4, N);
 
         self.diffuse_density();
-        // self.diffuse(0, &mut s, density, diff, dt, 4, N);
-        self.advect(0, density, s, Vx, Vy, dt, N);
     }
 
     pub fn set_bnd(&self, b: u32, x: &mut Vec<f32>, N: &u32) {
@@ -243,22 +253,11 @@ impl FluidCube {
                 x = ifloat - dtx * velocX[self.IX(&i, &j)];
                 y = jfloat - dty * velocY[self.IX(&i, &j)];
 
-                x = match x {
-                    d if d < 0.5 => 0.5,
-                    d if d > Nfloat + 0.5 => Nfloat + 0.5,
-                    //d if d >= Nfloat => Nfloat - 1.0,
-                    _ => x,
-                };
+                x = FluidCube::constrain(x, 0.5, Nfloat + 0.5);
+                y = FluidCube::constrain(y, 0.5, Nfloat + 0.5);
 
                 i0 = x.floor();
                 i1 = i0 + 1.0;
-
-                y = match y {
-                    d if d < 0.5 => 0.5,
-                    d if d > Nfloat + 0.5 => Nfloat + 0.5,
-                    // d if d >= Nfloat => Nfloat - 1.0,
-                    _ => y,
-                };
 
                 j0 = y.floor();
                 j1 = j0 + 1.0;
@@ -277,5 +276,10 @@ impl FluidCube {
             }
         }
         self.set_bnd(b, d, N);
+    }
+
+    //Vx, Vx0, Vx0, Vy0
+    pub fn advect_x(&mut self) {
+
     }
 }
