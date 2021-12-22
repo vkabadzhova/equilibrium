@@ -1,9 +1,16 @@
 mod fluid;
-//use crate::fluid::Fluid;
-//use crate::fluid;
-//use fluid;
 
 fn main() {
+    let fluid_config = FluidConfig {
+        ..Default::default()
+    }
+
+    let simulation_config = SimulationConfig {
+        ..Default::default()
+    }
+
+    let mut fluid = Fluid::new();
+
     let mut simulator: fluid::FluidSimulator = fluid::FluidSimulator {
         ..Default::default()
     };
