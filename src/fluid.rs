@@ -109,7 +109,7 @@ impl Fluid {
         imgbuf.save(img_name).unwrap();
     }
 
-    fn set_boundaries(b: u32, x: &mut Vec<f32>, size: &u32) {
+    fn set_boundaries(b: u32, x: &mut [f32], size: &u32) {
         for i in 1..size - 1 {
             x[Fluid::coordinate_to_idx(i, 0, size)] = if b == 2 {
                 -x[Fluid::coordinate_to_idx(i, 1, size)]
@@ -151,8 +151,8 @@ impl Fluid {
 
     fn diffuse(
         b: u32,
-        x: &mut Vec<f32>,
-        x0: &Vec<f32>,
+        x: &mut [f32],
+        x0: &[f32],
         diffusion: &f32,
         size: &u32,
         dt: &f32,
@@ -160,10 +160,10 @@ impl Fluid {
     ) {
         let size_float: f32 = (size - 2) as f32;
         let a: f32 = dt * diffusion * size_float * size_float;
-        Fluid::lin_solve(b, x, x0, a, 1 as f32 + 4 as f32 * a, size, iter);
+        Fluid::lin_solve(b, x, x0, a, 1.0 + 4.0 * a, size, iter);
     }
 
-    fn lin_solve(b: u32, x: &mut Vec<f32>, x0: &Vec<f32>, a: f32, c: f32, size: &u32, iter: &u32) {
+    fn lin_solve(b: u32, x: &mut [f32], x0: &[f32], a: f32, c: f32, size: &u32, iter: &u32) {
         let c_recip = 1f32 / c;
         for _k in 0..*iter {
             for j in 1..size - 1 {
@@ -182,10 +182,10 @@ impl Fluid {
     }
 
     fn project(
-        velocities_x: &mut Vec<f32>,
-        velocities_y: &mut Vec<f32>,
-        p: &mut Vec<f32>,
-        div: &mut Vec<f32>,
+        velocities_x: &mut [f32],
+        velocities_y: &mut [f32],
+        p: &mut [f32],
+        div: &mut [f32],
         size: &u32,
         iter: &u32,
     ) {
@@ -225,10 +225,10 @@ impl Fluid {
 
     fn advect(
         boundary: u32,
-        densities: &mut Vec<f32>,
-        densities0: &Vec<f32>,
-        velocities_x: &Vec<f32>,
-        velocities_y: &Vec<f32>,
+        densities: &mut [f32],
+        densities0: &[f32],
+        velocities_x: &[f32],
+        velocities_y: &[f32],
         size: &u32,
         dt: &f32,
     ) {
@@ -280,11 +280,6 @@ impl Fluid {
     }
 
     fn step(&mut self) {
-        //let mut fluid: &mut Fluid;
-        //fluid.clone_from(&self);
-        //let mut fluid: &mut Fluid = self.clone();
-
-        //let mut fluid: &mut Fluid = &mut self;
         Fluid::diffuse(
             1,
             &mut self.velocities_x0,
@@ -362,7 +357,6 @@ impl Fluid {
         );
 
         self.s = self.density.clone();
-        //self = fluid;
     }
 
     fn init_densitity(&mut self) {
@@ -382,7 +376,7 @@ impl Fluid {
     fn init_velocities(&mut self) {
         for j in 0..self.simulation_configs.size {
             for i in 0..self.simulation_configs.size {
-                self.add_velocity(i, j, 1 as f32, 1 as f32);
+                self.add_velocity(i, j, 1.0, 1.0);
             }
         }
     }
