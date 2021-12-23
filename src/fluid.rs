@@ -68,7 +68,6 @@ impl Fluid {
         }
     }
 
-<<<<<<< HEAD
     /// Returns the variable's value constrained between from and to (both inclusive)
     /// # Arguments
     /// * `var` - The variable whoose value to be processed
@@ -80,22 +79,6 @@ impl Fluid {
             d if d > to => to,
             _ => var,
         }
-=======
-    pub fn IX(x: u32, y: u32) -> usize {
-        let new_x = match x {
-            // TODO: Refactor
-            d if d <= N - 1 => x,
-            _ => N - 1,
-        };
-        let new_y = match y {
-            // TODO: Refactor
-            d if d <= N - 1 => y,
-            _ => N - 1,
-        };
-
-        // safe because will be index in array
-        (new_x + (new_y * N)) as usize
->>>>>>> Fix 2d to 1d translation (IX)
     }
 
     fn coordinate_to_idx(x: u32, y: u32, size: &u32) -> usize {
@@ -118,15 +101,8 @@ impl Fluid {
 
     fn render_density(&self, imgbuf: &mut image::RgbImage, frame_number: u32) {
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-<<<<<<< HEAD
             let density =
                 self.density[Fluid::coordinate_to_idx(x, y, &self.simulation_configs.size)];
-=======
-            let density = self.density[Fluid::IX(x, y)];
-            if (density != 0.0) {
-                dbg!(x, y, density);
-            }
->>>>>>> Fix 2d to 1d translation (IX)
             *pixel = image::Rgb([(density * 255.0) as u8, 200, density as u8]);
         }
         let img_name = format!("rendered_images/density{}.jpg", frame_number);
@@ -304,6 +280,11 @@ impl Fluid {
     }
 
     fn step(&mut self) {
+        //let mut fluid: &mut Fluid;
+        //fluid.clone_from(&self);
+        //let mut fluid: &mut Fluid = self.clone();
+
+        //let mut fluid: &mut Fluid = &mut self;
         Fluid::diffuse(
             1,
             &mut self.velocities_x0,
@@ -381,6 +362,7 @@ impl Fluid {
         );
 
         self.s = self.density.clone();
+        //self = fluid;
     }
 
     fn init_densitity(&mut self) {
@@ -395,13 +377,6 @@ impl Fluid {
                 self.add_density(i, j, 0.9);
             }
         }
-
-        // for j in 0..N {
-        //     for i in 0..N {
-        //         if (fluid.density)
-        //     }
-        // }
-
     }
 
     fn init_velocities(&mut self) {
