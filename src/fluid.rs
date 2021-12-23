@@ -6,10 +6,8 @@ use geo::{line_string, point};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
-static N: u32 = 128;
-
 //#[derive(Copy, Clone)]
-pub struct SimulationConfigs {
+pub struct SimulationConfig {
     pub dt: f32,
     pub iter: u32,
     pub scale: u32,
@@ -17,9 +15,9 @@ pub struct SimulationConfigs {
     pub size: u32,
 }
 
-impl Default for SimulationConfigs {
-    fn default() -> SimulationConfigs {
-        SimulationConfigs {
+impl Default for SimulationConfig {
+    fn default() -> SimulationConfig {
+        SimulationConfig {
             dt: 0.02,
             iter: 16,
             scale: 4,
@@ -31,8 +29,8 @@ impl Default for SimulationConfigs {
 
 //#[derive(Copy, Clone)]
 pub struct FluidConfig {
-    diffusion: f32,
-    viscousity: f32,
+    pub diffusion: f32,
+    pub viscousity: f32,
 }
 
 impl Default for FluidConfig {
@@ -47,7 +45,7 @@ impl Default for FluidConfig {
 //#[derive(Copy, Clone)]
 pub struct Fluid {
     pub fluid_configs: FluidConfig,
-    pub simulation_configs: SimulationConfigs,
+    pub simulation_configs: SimulationConfig,
     s: Vec<f32>,
     density: Vec<f32>,
     velocities_x: Vec<f32>,
@@ -57,14 +55,14 @@ pub struct Fluid {
 }
 
 impl Fluid {
-    pub fn new(init_fluid: FluidConfig, init_simulation: SimulationConfigs) -> Fluid {
+    pub fn new(init_fluid: FluidConfig, init_simulation: SimulationConfig) -> Fluid {
         Fluid {
-            s: vec![0.0; (&init_simulation.size * &init_simulation.size) as usize],
-            density: vec![0.0; (&init_simulation.size * &init_simulation.size) as usize],
-            velocities_x: vec![0.0; (&init_simulation.size * &init_simulation.size) as usize],
-            velocities_y: vec![0.0; (&init_simulation.size * &init_simulation.size) as usize],
-            velocities_x0: vec![0.0; (&init_simulation.size * &init_simulation.size) as usize],
-            velocities_y0: vec![0.0; (&init_simulation.size * &init_simulation.size) as usize],
+            s: vec![0.0; (init_simulation.size * init_simulation.size) as usize],
+            density: vec![0.0; (init_simulation.size * init_simulation.size) as usize],
+            velocities_x: vec![0.0; (init_simulation.size * init_simulation.size) as usize],
+            velocities_y: vec![0.0; (init_simulation.size * init_simulation.size) as usize],
+            velocities_x0: vec![0.0; (init_simulation.size * init_simulation.size) as usize],
+            velocities_y0: vec![0.0; (init_simulation.size * init_simulation.size) as usize],
             fluid_configs: init_fluid,
             simulation_configs: init_simulation,
         }
@@ -76,173 +74,178 @@ impl Fluid {
     /// * `from` - the minimal value that can be hold (inclusive)
     /// * `to` - the maximum value that can be hold (inclusive)
     fn constrain<T: PartialOrd>(var: T, from: T, to: T) -> T {
-        let var = match var {
+        match var {
             d if d < from => from,
             d if d > to => to,
             _ => var,
-        };
-        var
+        }
     }
 
-    fn coordinate_to_idx(&self, x: u32, y: u32) -> usize {
-        let x = &Fluid::constrain(x, 0, self.simulation_configs.size - 1);
-        let y = &Fluid::constrain(y, 0, self.simulation_configs.size - 1);
-        (x + (y * self.simulation_configs.size)) as usize
+    fn coordinate_to_idx(x: u32, y: u32, size: &u32) -> usize {
+        let x = &Fluid::constrain(x, 0, size - 1);
+        let y = &Fluid::constrain(y, 0, size - 1);
+        (x + (y * size)) as usize
     }
 
     fn add_density(&mut self, x: u32, y: u32, amount: f32) {
-        let idx: usize = self.coordinate_to_idx(x, y);
+        let idx: usize = Fluid::coordinate_to_idx(x, y, &self.simulation_configs.size);
         self.density[idx] += amount;
         self.s[idx] += amount;
     }
 
     fn add_velocity(&mut self, x: u32, y: u32, amount_x: f32, amount_y: f32) {
-        let idx: usize = self.coordinate_to_idx(x, y);
+        let idx: usize = Fluid::coordinate_to_idx(x, y, &self.simulation_configs.size);
         self.velocities_x[idx] += amount_x;
         self.velocities_y[idx] += amount_y;
     }
 
     fn render_density(&self, imgbuf: &mut image::RgbImage, frame_number: u32) {
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-            let density = self.density[self.coordinate_to_idx(x, y)];
+            let density =
+                self.density[Fluid::coordinate_to_idx(x, y, &self.simulation_configs.size)];
             *pixel = image::Rgb([(density * 255.0) as u8, 200, density as u8]);
         }
         let img_name = format!("rendered_images/density{}.jpg", frame_number);
         imgbuf.save(img_name).unwrap();
     }
 
-    fn set_boundaries(&self, b: u32, x: &mut Vec<f32>) {
-        for i in 1..self.simulation_configs.size - 1 {
-            x[self.coordinate_to_idx(i, 0)] = if b == 2 {
-                -x[self.coordinate_to_idx(i, 1)]
+    fn set_boundaries(b: u32, x: &mut Vec<f32>, size: &u32) {
+        for i in 1..size - 1 {
+            x[Fluid::coordinate_to_idx(i, 0, size)] = if b == 2 {
+                -x[Fluid::coordinate_to_idx(i, 1, size)]
             } else {
-                x[self.coordinate_to_idx(i, 1)]
+                x[Fluid::coordinate_to_idx(i, 1, size)]
             };
-            x[self.coordinate_to_idx(i, self.simulation_configs.size - 1)] = if b == 2 {
-                -x[self.coordinate_to_idx(i, self.simulation_configs.size - 2)]
+            x[Fluid::coordinate_to_idx(i, size - 1, size)] = if b == 2 {
+                -x[Fluid::coordinate_to_idx(i, size - 2, size)]
             } else {
-                x[self.coordinate_to_idx(i, self.simulation_configs.size - 2)]
-            };
-        }
-
-        for j in 1..self.simulation_configs.size - 1 {
-            x[self.coordinate_to_idx(0, j)] = if b == 1 {
-                -x[self.coordinate_to_idx(1, j)]
-            } else {
-                x[self.coordinate_to_idx(1, j)]
-            };
-            x[self.coordinate_to_idx(self.simulation_configs.size - 1, j)] = if b == 1 {
-                -x[self.coordinate_to_idx(self.simulation_configs.size - 2, j)]
-            } else {
-                x[self.coordinate_to_idx(self.simulation_configs.size - 2, j)]
+                x[Fluid::coordinate_to_idx(i, size - 2, size)]
             };
         }
 
-        x[self.coordinate_to_idx(0, 0)] =
-            0.5 * (x[self.coordinate_to_idx(1, 0)] + x[self.coordinate_to_idx(0, 1)]);
-        x[self.coordinate_to_idx(0, self.simulation_configs.size - 1)] = 0.5
-            * (x[self.coordinate_to_idx(1, self.simulation_configs.size - 1)]
-                + x[self.coordinate_to_idx(0, self.simulation_configs.size - 2)]);
-        x[self.coordinate_to_idx(self.simulation_configs.size - 1, 0)] = 0.5
-            * (x[self.coordinate_to_idx(self.simulation_configs.size - 2, 0)]
-                + x[self.coordinate_to_idx(self.simulation_configs.size - 1, 1)]);
-        x[self.coordinate_to_idx(
-            self.simulation_configs.size - 1,
-            self.simulation_configs.size - 1,
-        )] = 0.5
-            * (x[self.coordinate_to_idx(
-                self.simulation_configs.size - 2,
-                self.simulation_configs.size - 1,
-            )] + x[self.coordinate_to_idx(
-                self.simulation_configs.size - 1,
-                self.simulation_configs.size - 2,
-            )]);
+        for j in 1..size - 1 {
+            x[Fluid::coordinate_to_idx(0, j, size)] = if b == 1 {
+                -x[Fluid::coordinate_to_idx(1, j, size)]
+            } else {
+                x[Fluid::coordinate_to_idx(1, j, size)]
+            };
+            x[Fluid::coordinate_to_idx(size - 1, j, size)] = if b == 1 {
+                -x[Fluid::coordinate_to_idx(size - 2, j, size)]
+            } else {
+                x[Fluid::coordinate_to_idx(size - 2, j, size)]
+            };
+        }
+
+        x[Fluid::coordinate_to_idx(0, 0, size)] = 0.5
+            * (x[Fluid::coordinate_to_idx(1, 0, size)] + x[Fluid::coordinate_to_idx(0, 1, size)]);
+        x[Fluid::coordinate_to_idx(0, size - 1, size)] = 0.5
+            * (x[Fluid::coordinate_to_idx(1, *size - 1, size)]
+                + x[Fluid::coordinate_to_idx(0, *size - 2, size)]);
+        x[Fluid::coordinate_to_idx(size - 1, 0, size)] = 0.5
+            * (x[Fluid::coordinate_to_idx(size - 2, 0, size)]
+                + x[Fluid::coordinate_to_idx(size - 1, 1, size)]);
+        x[Fluid::coordinate_to_idx(size - 1, size - 1, size)] = 0.5
+            * (x[Fluid::coordinate_to_idx(size - 2, size - 1, size)]
+                + x[Fluid::coordinate_to_idx(size - 1, size - 2, size)]);
     }
 
-    fn diffuse(&self, b: u32, x: &mut Vec<f32>, x0: &Vec<f32>, diffusion: &f32) {
-        let size_float: f32 = (self.simulation_configs.size - 2) as f32;
-        let a: f32 = self.simulation_configs.dt * diffusion * size_float * size_float;
-        self.lin_solve(b, x, x0, a, 1 as f32 + 4 as f32 * a);
+    fn diffuse(
+        b: u32,
+        x: &mut Vec<f32>,
+        x0: &Vec<f32>,
+        diffusion: &f32,
+        size: &u32,
+        dt: &f32,
+        iter: &u32,
+    ) {
+        let size_float: f32 = (size - 2) as f32;
+        let a: f32 = dt * diffusion * size_float * size_float;
+        Fluid::lin_solve(b, x, x0, a, 1 as f32 + 4 as f32 * a, size, iter);
     }
 
-    fn lin_solve(&self, b: u32, x: &mut Vec<f32>, x0: &Vec<f32>, a: f32, c: f32) {
+    fn lin_solve(b: u32, x: &mut Vec<f32>, x0: &Vec<f32>, a: f32, c: f32, size: &u32, iter: &u32) {
         let c_recip = 1f32 / c;
-        for _k in 0..self.simulation_configs.iter {
-            for j in 1..&self.simulation_configs.size - 1 {
-                for i in 1..&self.simulation_configs.size - 1 {
-                    x[self.coordinate_to_idx(i, j)] = (x0[self.coordinate_to_idx(i, j)]
-                        + a * (x[self.coordinate_to_idx(i + 1, j)]
-                            + x[self.coordinate_to_idx(i - 1, j)]
-                            + x[self.coordinate_to_idx(i, j + 1)]
-                            + x[self.coordinate_to_idx(i, j - 1)]))
+        for _k in 0..*iter {
+            for j in 1..size - 1 {
+                for i in 1..size - 1 {
+                    x[Fluid::coordinate_to_idx(i, j, size)] = (x0
+                        [Fluid::coordinate_to_idx(i, j, size)]
+                        + a * (x[Fluid::coordinate_to_idx(i + 1, j, size)]
+                            + x[Fluid::coordinate_to_idx(i - 1, j, size)]
+                            + x[Fluid::coordinate_to_idx(i, j + 1, size)]
+                            + x[Fluid::coordinate_to_idx(i, j - 1, size)]))
                         * c_recip;
                 }
             }
-            self.set_boundaries(b, x);
+            Fluid::set_boundaries(b, x, size);
         }
     }
 
     fn project(
-        &self,
         velocities_x: &mut Vec<f32>,
         velocities_y: &mut Vec<f32>,
         p: &mut Vec<f32>,
         div: &mut Vec<f32>,
+        size: &u32,
+        iter: &u32,
     ) {
-        for j in 1..&self.simulation_configs.size - 1 {
-            for i in 1..&self.simulation_configs.size - 1 {
-                div[self.coordinate_to_idx(i, j)] = -0.5
-                    * (velocities_x[self.coordinate_to_idx(i + 1, j)]
-                        - velocities_x[self.coordinate_to_idx(i - 1, j)]
-                        + velocities_y[self.coordinate_to_idx(i, j + 1)]
-                        - velocities_y[self.coordinate_to_idx(i, j - 1)])
-                    / self.simulation_configs.size as f32;
+        for j in 1..size - 1 {
+            for i in 1..size - 1 {
+                div[Fluid::coordinate_to_idx(i, j, size)] = -0.5
+                    * (velocities_x[Fluid::coordinate_to_idx(i + 1, j, size)]
+                        - velocities_x[Fluid::coordinate_to_idx(i - 1, j, size)]
+                        + velocities_y[Fluid::coordinate_to_idx(i, j + 1, size)]
+                        - velocities_y[Fluid::coordinate_to_idx(i, j - 1, size)])
+                    / *size as f32;
 
-                p[self.coordinate_to_idx(i, j)] = 0f32;
+                p[Fluid::coordinate_to_idx(i, j, size)] = 0f32;
             }
         }
 
-        self.set_boundaries(0, div);
-        self.set_boundaries(0, p);
-        self.lin_solve(0, p, div, 1f32, 4f32);
+        Fluid::set_boundaries(0, div, size);
+        Fluid::set_boundaries(0, p, size);
+        Fluid::lin_solve(0, p, div, 1f32, 4f32, size, iter);
 
-        for j in 1..self.simulation_configs.size - 1 {
-            for i in 1..self.simulation_configs.size - 1 {
-                velocities_x[self.coordinate_to_idx(i, j)] -= 0.5
-                    * (p[self.coordinate_to_idx(i + 1, j)] - p[self.coordinate_to_idx(i - 1, j)])
-                    * self.simulation_configs.size as f32;
-                velocities_y[self.coordinate_to_idx(i, j)] -= 0.5
-                    * (p[self.coordinate_to_idx(i, j + 1)] - p[self.coordinate_to_idx(i, j - 1)])
-                    * self.simulation_configs.size as f32;
+        for j in 1..size - 1 {
+            for i in 1..size - 1 {
+                velocities_x[Fluid::coordinate_to_idx(i, j, size)] -= 0.5
+                    * (p[Fluid::coordinate_to_idx(i + 1, j, size)]
+                        - p[Fluid::coordinate_to_idx(i - 1, j, size)])
+                    * *size as f32;
+                velocities_y[Fluid::coordinate_to_idx(i, j, size)] -= 0.5
+                    * (p[Fluid::coordinate_to_idx(i, j + 1, size)]
+                        - p[Fluid::coordinate_to_idx(i, j - 1, size)])
+                    * *size as f32;
             }
         }
 
-        self.set_boundaries(1, velocities_x);
-        self.set_boundaries(2, velocities_y);
+        Fluid::set_boundaries(1, velocities_x, size);
+        Fluid::set_boundaries(2, velocities_y, size);
     }
 
     fn advect(
-        &self,
         boundary: u32,
         densities: &mut Vec<f32>,
         densities0: &Vec<f32>,
         velocities_x: &Vec<f32>,
         velocities_y: &Vec<f32>,
+        size: &u32,
+        dt: &f32,
     ) {
         let (mut i0, mut i1, mut j0, mut j1): (f32, f32, f32, f32);
 
-        let dtx: f32 = &self.simulation_configs.dt * (self.simulation_configs.size as f32 - 2f32);
+        let dtx: f32 = *dt * (*size as f32 - 2f32);
         let dty: f32 = dtx;
 
         let (mut s0, mut s1, mut t0, mut t1): (f32, f32, f32, f32);
         let (mut x, mut y): (f32, f32);
 
-        let size_float: f32 = self.simulation_configs.size as f32;
+        let size_float: f32 = *size as f32;
 
-        for j in 1..self.simulation_configs.size - 1 {
-            for i in 1..self.simulation_configs.size - 1 {
-                x = i as f32 - dtx * velocities_x[self.coordinate_to_idx(i, j)];
-                y = j as f32 - dty * velocities_y[self.coordinate_to_idx(i, j)];
+        for j in 1..size - 1 {
+            for i in 1..size - 1 {
+                x = i as f32 - dtx * velocities_x[Fluid::coordinate_to_idx(i, j, size)];
+                y = j as f32 - dty * velocities_y[Fluid::coordinate_to_idx(i, j, size)];
 
                 x = Fluid::constrain(x, 0.5, size_float - 1.0);
                 y = Fluid::constrain(y, 0.5, size_float - 1.0);
@@ -262,18 +265,18 @@ impl Fluid {
                 let (j0_int, j1_int) = (j0 as u32, j1 as u32);
 
                 if i1 >= size_float || j1 >= size_float {
-                    densities[self.coordinate_to_idx(i, j)] =
-                        densities[self.coordinate_to_idx(i - 1, j)];
+                    densities[Fluid::coordinate_to_idx(i, j, size)] =
+                        densities[Fluid::coordinate_to_idx(i - 1, j, size)];
                     break;
                 }
-                densities[self.coordinate_to_idx(i, j)] = s0
-                    * (t0 * densities0[self.coordinate_to_idx(i0_int, j0_int)]
-                        + t1 * densities0[self.coordinate_to_idx(i0_int, j1_int)])
-                    + s1 * (t0 * densities0[self.coordinate_to_idx(i1_int, j0_int)]
-                        + t1 * densities0[self.coordinate_to_idx(i1_int, j1_int)]);
+                densities[Fluid::coordinate_to_idx(i, j, size)] = s0
+                    * (t0 * densities0[Fluid::coordinate_to_idx(i0_int, j0_int, size)]
+                        + t1 * densities0[Fluid::coordinate_to_idx(i0_int, j1_int, size)])
+                    + s1 * (t0 * densities0[Fluid::coordinate_to_idx(i1_int, j0_int, size)]
+                        + t1 * densities0[Fluid::coordinate_to_idx(i1_int, j1_int, size)]);
             }
         }
-        self.set_boundaries(boundary, densities);
+        Fluid::set_boundaries(boundary, densities, size);
     }
 
     fn step(&mut self) {
@@ -281,66 +284,85 @@ impl Fluid {
         //fluid.clone_from(&self);
         //let mut fluid: &mut Fluid = self.clone();
 
-        let mut fluid: &mut Fluid = &mut self;
-        self.diffuse(
+        //let mut fluid: &mut Fluid = &mut self;
+        Fluid::diffuse(
             1,
-            &mut fluid.velocities_x0,
-            &fluid.velocities_x,
-            &fluid.fluid_configs.viscousity,
+            &mut self.velocities_x0,
+            &self.velocities_x,
+            &self.fluid_configs.viscousity,
+            &self.simulation_configs.size,
+            &self.simulation_configs.dt,
+            &self.simulation_configs.iter,
         );
-        self.diffuse(
+        Fluid::diffuse(
             2,
-            &mut fluid.velocities_y0,
-            &fluid.velocities_y,
-            &fluid.fluid_configs.viscousity,
+            &mut self.velocities_y0,
+            &self.velocities_y,
+            &self.fluid_configs.viscousity,
+            &self.simulation_configs.size,
+            &self.simulation_configs.dt,
+            &self.simulation_configs.iter,
         );
 
-        self.project(
-            &mut fluid.velocities_x0,
-            &mut fluid.velocities_y0,
-            &mut fluid.velocities_x,
-            &mut fluid.velocities_y,
+        Fluid::project(
+            &mut self.velocities_x0,
+            &mut self.velocities_y0,
+            &mut self.velocities_x,
+            &mut self.velocities_y,
+            &self.simulation_configs.size,
+            &self.simulation_configs.iter,
         );
 
-        self.advect(
+        Fluid::advect(
             1,
-            &mut fluid.velocities_x,
-            &fluid.velocities_x0,
-            &fluid.velocities_x0,
-            &fluid.velocities_y0,
+            &mut self.velocities_x,
+            &self.velocities_x0,
+            &self.velocities_x0,
+            &self.velocities_y0,
+            &self.simulation_configs.size,
+            &self.simulation_configs.dt,
         );
-        self.advect(
+        Fluid::advect(
             2,
-            &mut fluid.velocities_y,
-            &fluid.velocities_y0,
-            &fluid.velocities_x0,
-            &fluid.velocities_y0,
+            &mut self.velocities_y,
+            &self.velocities_y0,
+            &self.velocities_x0,
+            &self.velocities_y0,
+            &self.simulation_configs.size,
+            &self.simulation_configs.dt,
         );
 
-        self.project(
-            &mut fluid.velocities_x,
-            &mut fluid.velocities_y,
-            &mut fluid.velocities_x0,
-            &mut fluid.velocities_y0,
+        Fluid::project(
+            &mut self.velocities_x,
+            &mut self.velocities_y,
+            &mut self.velocities_x0,
+            &mut self.velocities_y0,
+            &self.simulation_configs.size,
+            &self.simulation_configs.iter,
         );
 
-        self.diffuse(
+        Fluid::diffuse(
             0,
-            &mut fluid.s,
-            &fluid.density,
-            &fluid.fluid_configs.diffusion,
+            &mut self.s,
+            &self.density,
+            &self.fluid_configs.diffusion,
+            &self.simulation_configs.size,
+            &self.simulation_configs.dt,
+            &self.simulation_configs.iter,
         );
 
-        self.advect(
+        Fluid::advect(
             0,
-            &mut fluid.density,
-            &fluid.s,
-            &fluid.velocities_x,
-            &fluid.velocities_y,
+            &mut self.density,
+            &self.s,
+            &self.velocities_x,
+            &self.velocities_y,
+            &self.simulation_configs.size,
+            &self.simulation_configs.dt,
         );
 
-        fluid.s = fluid.density.clone();
-        self = fluid;
+        self.s = self.density.clone();
+        //self = fluid;
     }
 
     fn init_densitity(&mut self) {
@@ -380,8 +402,7 @@ impl Fluid {
 
         let ls = line_string![(x: (self.simulation_configs.size/2) as f32, y: (self.simulation_configs.size/2) as f32), (x: rand_x as f32, y: rand_y as f32)];
 
-        // let ls =
-        //     line_string![center_point, rotating_point];
+        //let ls = line_string![center_point, rotating_point];
 
         let rotated = ls.rotate_around_point(angle as f32, center_point);
 
