@@ -304,11 +304,6 @@ impl Fluid {
     }
 
     fn step(&mut self) {
-        //let mut fluid: &mut Fluid;
-        //fluid.clone_from(&self);
-        //let mut fluid: &mut Fluid = self.clone();
-
-        //let mut fluid: &mut Fluid = &mut self;
         Fluid::diffuse(
             1,
             &mut self.velocities_x0,
@@ -386,7 +381,6 @@ impl Fluid {
         );
 
         self.s = self.density.clone();
-        //self = fluid;
     }
 
     fn init_densitity(&mut self) {
