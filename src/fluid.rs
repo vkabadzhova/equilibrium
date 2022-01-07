@@ -1,34 +1,51 @@
+use derive_getters::Getters;
 use geo::algorithm::rotate::RotatePoint;
 use geo::{line_string, point};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
-#[derive(Copy, Clone)]
+/// Major configurations in order to run the simulation
+#[derive(Copy, Clone, Getters)]
 pub struct SimulationConfig {
-    pub delta_t: f32,
-    pub iterations: u32,
-    pub t: f32,
-    pub size: u32,
+    // The size of each step
+    delta_t: f32,
+    // Number of iterations
+    iterations: u32,
+    // Current step
+    t: f32,
+    // The size of the fluid. A square container is used
+    size: u32,
 }
 
 impl Default for SimulationConfig {
     fn default() -> SimulationConfig {
         SimulationConfig {
-            // The size of each step
             delta_t: 0.02,
-            // Number of iterations
             iterations: 16,
-            // Current step
             t: 0.0,
-            // The size of the fluid. A square container is used
             size: 128,
         }
     }
 }
 
-#[derive(Copy, Clone)]
+impl SimulationConfig {
+    /// Creates new SimulationConfig struct
+    pub fn new(delta_t: f32, iterations: u32, fluid_container_size: u32) -> Self {
+        SimulationConfig {
+            delta_t: delta_t,
+            iterations: iterations,
+            t: 0.0,
+            size: fluid_container_size,
+        }
+    }
+}
+
+/// Struct describing general fluid-related configurations
+#[derive(Copy, Clone, Getters)]
 pub struct FluidConfig {
+    /// fluid's diffusion
     pub diffusion: f32,
+    /// fluid's viscousity
     pub viscousity: f32,
 }
 
@@ -58,6 +75,8 @@ macro_rules! idx {
     };
 }
 
+/// The struct that is responsible for simulating the fluid's behavour
+#[derive(Getters)]
 pub struct Fluid {
     fluid_configs: FluidConfig,
     simulation_configs: SimulationConfig,
@@ -70,7 +89,8 @@ pub struct Fluid {
 }
 
 impl Fluid {
-    pub fn new(init_fluid: FluidConfig, init_simulation: SimulationConfig) -> Fluid {
+    /// Creates new Fluid struct
+    pub fn new(init_fluid: FluidConfig, init_simulation: SimulationConfig) -> Self {
         let fluid_field_size = (init_simulation.size * init_simulation.size) as usize;
 
         Fluid {
@@ -95,15 +115,6 @@ impl Fluid {
         let idx = idx!(x, y, self.simulation_configs.size);
         self.velocities_x[idx] += amount_x;
         self.velocities_y[idx] += amount_y;
-    }
-
-    fn render_density(&self, imgbuf: &mut image::RgbImage, frame_number: u32) {
-        for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-            let density = self.density[idx!(x, y, self.simulation_configs.size)];
-            *pixel = image::Rgb([(density * 255.0) as u8, 200, density as u8]);
-        }
-        let img_name = format!("rendered_images/density{}.jpg", frame_number);
-        imgbuf.save(img_name).unwrap();
     }
 
     /// Process the edge walls, a.k.a. turn the velocities in the opposite way
@@ -285,7 +296,10 @@ impl Fluid {
         Fluid::set_boundaries(edge_wall, densities, size);
     }
 
-    fn step(&mut self) {
+    /// Simulates the next step of the fluid's movement.
+    /// That includes applying diffusion and advection to the fluid
+    /// and constraining it to not get out of the wall's boundaries
+    pub fn step(&mut self) {
         Fluid::diffuse(
             ContainerWall::East,
             &mut self.velocities_x0,
@@ -365,7 +379,7 @@ impl Fluid {
         self.s = self.density.clone();
     }
 
-    fn init_densitity(&mut self) {
+    fn init_density(&mut self) {
         for j in 0..self.simulation_configs.size {
             for i in 0..self.simulation_configs.size {
                 self.add_density(i, j, 0.0);
@@ -387,7 +401,10 @@ impl Fluid {
         }
     }
 
-    fn add_noise(&mut self) {
+    /// Applies random force (noise) to the fluid to make the fluid run
+    /// more attractively when there's no specific purpose yet of the
+    /// simulation yet.
+    pub fn add_noise(&mut self) {
         let perlin = Perlin::new();
         let t_f64 = self.simulation_configs.t as f64;
 
@@ -414,19 +431,9 @@ impl Fluid {
         );
     }
 
-    pub fn simulate(&mut self) {
-        //Set up
+    /// Initialized the fluid
+    pub fn init(&mut self) {
         self.init_velocities();
-        self.init_densitity();
-
-        // draw
-        for i in 0..self.simulation_configs.iterations {
-            self.add_noise();
-            self.step();
-
-            let mut imgbuf =
-                image::ImageBuffer::new(self.simulation_configs.size, self.simulation_configs.size);
-            self.render_density(&mut imgbuf, i);
-        }
+        self.init_density();
     }
 }
