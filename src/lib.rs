@@ -10,3 +10,5 @@ pub mod fluid;
 
 /// The renderer is the visualizer of the project
 pub mod renderer;
+
+pub mod app;
