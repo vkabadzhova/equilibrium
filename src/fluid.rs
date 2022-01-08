@@ -1,20 +1,19 @@
-use derive_getters::Getters;
 use geo::algorithm::rotate::RotatePoint;
 use geo::{line_string, point};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
 /// Major configurations in order to run the simulation
-#[derive(Copy, Clone, Getters)]
+#[derive(Copy, Clone)]
 pub struct SimulationConfig {
-    // The size of each step
-    delta_t: f32,
-    // Number of iterations
-    iterations: u32,
-    // Current step
+    /// The size of each step
+    pub delta_t: f32,
+    /// Number of iterations
+    pub iterations: u32,
+    /// Current step
     t: f32,
-    // The size of the fluid. A square container is used
-    size: u32,
+    /// The size of the fluid. A square container is used
+    pub size: u32,
 }
 
 impl Default for SimulationConfig {
@@ -41,11 +40,11 @@ impl SimulationConfig {
 }
 
 /// Struct describing general fluid-related configurations
-#[derive(Copy, Clone, Getters)]
+#[derive(Copy, Clone)]
 pub struct FluidConfig {
-    /// fluid's diffusion
+    ///fluid's diffusion
     pub diffusion: f32,
-    /// fluid's viscousity
+    ///fluid's viscousity
     pub viscousity: f32,
 }
 
@@ -76,14 +75,22 @@ macro_rules! idx {
 }
 
 /// The struct that is responsible for simulating the fluid's behavour
-#[derive(Getters)]
 pub struct Fluid {
-    fluid_configs: FluidConfig,
-    simulation_configs: SimulationConfig,
+    /// general configurations for the simulated fluid
+    pub fluid_configs: FluidConfig,
+    /// general configurations for the simulation itself
+    pub simulation_configs: SimulationConfig,
     s: Vec<f32>,
-    density: Vec<f32>,
-    velocities_x: Vec<f32>,
-    velocities_y: Vec<f32>,
+    /// the distributed densities for the given step
+    pub density: Vec<f32>,
+    /// the distributed velocities in the x direction for the given step.
+    /// **Note:** The velocity is a vector formed by both the `velocities_x` and `velocities_y`
+    /// vector structures
+    pub velocities_x: Vec<f32>,
+    /// the distributed velocities in the y direction for the given step.
+    /// **Note:** The velocity is a vector formed by both the `velocities_x` and `velocities_y`
+    /// vector structures
+    pub velocities_y: Vec<f32>,
     velocities_x0: Vec<f32>,
     velocities_y0: Vec<f32>,
 }
@@ -412,10 +419,8 @@ impl Fluid {
         let rand_x = rand::thread_rng().gen_range(0..self.simulation_configs.size);
         let rand_y = rand::thread_rng().gen_range(0..self.simulation_configs.size);
 
-        let (center_point, rotating_point) = (
-            point!(x: (self.simulation_configs.size/2) as f32, y: (self.simulation_configs.size/2) as f32),
-            point!(x: rand_x as f32, y: rand_y as f32),
-        );
+        let center_point = point!(x: (self.simulation_configs.size/2) as f32, y: (self.simulation_configs.size/2) as f32);
+        let point_of_rotation = point!(x: rand_x as f32, y: rand_y as f32);
 
         let ls = line_string![(x: (self.simulation_configs.size/2) as f32, y: (self.simulation_configs.size/2) as f32), (x: rand_x as f32, y: rand_y as f32)];
 
