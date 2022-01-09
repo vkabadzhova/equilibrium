@@ -8,8 +8,8 @@ use rand::Rng;
 pub struct SimulationConfig {
     /// The size of each step
     pub delta_t: f32,
-    /// Number of iterations
-    pub iterations: u32,
+    /// Number of frames to be simulated
+    pub frames: i64,
     /// Current step
     t: f32,
     /// The size of the fluid. A square container is used
@@ -20,7 +20,7 @@ impl Default for SimulationConfig {
     fn default() -> SimulationConfig {
         SimulationConfig {
             delta_t: 0.02,
-            iterations: 16,
+            frames: 16,
             t: 0.0,
             size: 128,
         }
@@ -29,10 +29,10 @@ impl Default for SimulationConfig {
 
 impl SimulationConfig {
     /// Creates new SimulationConfig struct
-    pub fn new(delta_t: f32, iterations: u32, fluid_container_size: u32) -> Self {
+    pub fn new(delta_t: f32, frames: i64, fluid_container_size: u32) -> Self {
         SimulationConfig {
             delta_t: delta_t,
-            iterations: iterations,
+            frames: frames,
             t: 0.0,
             size: fluid_container_size,
         }
@@ -171,11 +171,11 @@ impl Fluid {
         diffusion: &f32,
         size: u32,
         delta_t: &f32,
-        iterations: u32,
+        frames: i64,
     ) {
         let size_float = (size - 2) as f32;
         let a = delta_t * diffusion * size_float * size_float;
-        Fluid::lin_solve(edge_wall, x, x0, a, 1.0 + 4.0 * a, size, iterations);
+        Fluid::lin_solve(edge_wall, x, x0, a, 1.0 + 4.0 * a, size, frames);
     }
 
     fn lin_solve(
@@ -185,10 +185,10 @@ impl Fluid {
         a: f32,
         c: f32,
         size: u32,
-        iterations: u32,
+        frames: i64,
     ) {
         let c_recip = 1f32 / c;
-        for _k in 0..iterations {
+        for _k in 0..frames {
             for j in 1..size - 1 {
                 for i in 1..size - 1 {
                     x[idx!(i, j, size)] = (x0[idx!(i, j, size)]
@@ -209,7 +209,7 @@ impl Fluid {
         p: &mut [f32],
         div: &mut [f32],
         size: u32,
-        iterations: u32,
+        frames: i64,
     ) {
         for j in 1..size - 1 {
             for i in 1..size - 1 {
@@ -225,15 +225,7 @@ impl Fluid {
 
         Fluid::set_boundaries(ContainerWall::DefaultWall, div, size);
         Fluid::set_boundaries(ContainerWall::DefaultWall, p, size);
-        Fluid::lin_solve(
-            ContainerWall::DefaultWall,
-            p,
-            div,
-            1f32,
-            4f32,
-            size,
-            iterations,
-        );
+        Fluid::lin_solve(ContainerWall::DefaultWall, p, div, 1f32, 4f32, size, frames);
 
         for j in 1..size - 1 {
             for i in 1..size - 1 {
@@ -314,7 +306,7 @@ impl Fluid {
             &self.fluid_configs.viscousity,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
-            self.simulation_configs.iterations,
+            self.simulation_configs.frames,
         );
         Fluid::diffuse(
             ContainerWall::North,
@@ -323,7 +315,7 @@ impl Fluid {
             &self.fluid_configs.viscousity,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
-            self.simulation_configs.iterations,
+            self.simulation_configs.frames,
         );
 
         Fluid::project(
@@ -332,7 +324,7 @@ impl Fluid {
             &mut self.velocities_x,
             &mut self.velocities_y,
             self.simulation_configs.size,
-            self.simulation_configs.iterations,
+            self.simulation_configs.frames,
         );
 
         Fluid::advect(
@@ -360,7 +352,7 @@ impl Fluid {
             &mut self.velocities_x0,
             &mut self.velocities_y0,
             self.simulation_configs.size,
-            self.simulation_configs.iterations,
+            self.simulation_configs.frames,
         );
 
         Fluid::diffuse(
@@ -370,7 +362,7 @@ impl Fluid {
             &self.fluid_configs.diffusion,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
-            self.simulation_configs.iterations,
+            self.simulation_configs.frames,
         );
 
         Fluid::advect(
