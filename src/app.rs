@@ -1,45 +1,62 @@
 use crate::renderer::Renderer;
 use eframe::{egui, epi};
+use image::GenericImageView;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
+
+/// Entry-point for the fluid simulation application
 pub struct App {
-    // Example stuff:
     label: String,
 
     // this how you opt-out of serialization of a member
     #[cfg_attr(feature = "persistence", serde(skip))]
-    value: u32,
-
-    #[cfg_attr(feature = "persistence", serde(skip))]
-    max_value: u32,
+    current_frame: i64,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
     renderer: Renderer,
+
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    simulated: bool,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        let default_value = 0;
+impl App {
+    /// Creates new App instance
+    pub fn new(renderer: Renderer) -> Self {
         Self {
-            // Example stuff:
             label: "Type frame number".to_owned(),
-            value: default_value,
-            max_value: 10,
-            renderer: Renderer::new(),
+            current_frame: 0,
+            renderer: renderer,
+            simulated: false,
         }
     }
-}
 
-impl App {}
+    fn show_image(&self, frame: &epi::Frame, ui: &mut egui::Ui) {
+        let image_path = self.renderer.rendered_images_dir.clone()
+            + "/density"
+            + &self.current_frame.to_string()
+            + ".jpg";
+
+        let image = image::open(image_path).unwrap();
+        let size = image.dimensions();
+
+        let image = epi::Image::from_rgba_unmultiplied(
+            [size.0.try_into().unwrap(), size.1.try_into().unwrap()],
+            &image.into_rgba8().into_raw(),
+        );
+        let texture_id = frame.alloc_texture(image);
+        let mut size = egui::Vec2::new(size.0 as f32, size.1 as f32);
+        size *= (ui.available_width() / size.x).min(1.0);
+        ui.image(texture_id, size);
+    }
+}
 
 impl epi::App for App {
     fn name(&self) -> &str {
         "eframe template"
     }
 
-    /// Called once before the first frame.
     fn setup(
         &mut self,
         _ctx: &egui::CtxRef,
@@ -61,20 +78,13 @@ impl epi::App for App {
         epi::set_value(storage, epi::APP_KEY, self);
     }
 
-    /// Called each time the UI needs repainting, which may be many times per second.
-    /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::CtxRef, frame: &epi::Frame) {
         let Self {
             label,
-            value,
-            max_value,
+            current_frame,
             renderer,
+            simulated,
         } = self;
-
-        // Examples of how to create different panels and windows.
-        // Pick whichever suits you.
-        // Tip: a good default choice is to just keep the `CentralPanel`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
@@ -95,16 +105,26 @@ impl epi::App for App {
                 ui.text_edit_singleline(label);
             });
 
-            ui.add(egui::Slider::new(value, 0..=self.max_value).text("value"));
+            ui.add(
+                egui::Slider::new(
+                    current_frame,
+                    0..=self.renderer.simulation_configs.frames - 1,
+                )
+                .text("Current frame"),
+            );
             if ui.button("Previous").clicked() {
-                *value -= 1;
+                *current_frame = (*current_frame - 1) % self.renderer.simulation_configs.frames;
+                if *current_frame < 0 {
+                    *current_frame = self.renderer.simulation_configs.frames - 1;
+                }
             }
             if ui.button("Next").clicked() {
-                *value += 1;
+                *current_frame = (*current_frame + 1) % self.renderer.simulation_configs.frames;
             }
 
-            if ui.button("Simulate Fluid").clicked() {
-                *value += 1;
+            if ui.button("Simulate fluid").clicked() {
+                self.renderer.simulate();
+                *simulated = true;
             }
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 ui.horizontal(|ui| {
@@ -121,6 +141,20 @@ impl epi::App for App {
             // The central panel the region left after adding TopPanel's and SidePanel's
 
             ui.heading("Welcome to the Equilibrium Fluid Simulator!");
+            if self.simulated {
+                self.show_image(frame, ui);
+            }
+            /*
+            if *simulated {
+                ui.image(
+                    egui::TextureId::Egui,
+                    [
+                        self.renderer.fluid.simulation_configs.size as f32,
+                        self.renderer.fluid.simulation_configs.size as f32,
+                    ],
+                );
+            }
+            */
             ui.hyperlink("https://github.com/vkabadzhova/equilibrium");
             ui.add(egui::github_link_file!(
                 "https://github.com/vkabadzhova/equilibrium",
