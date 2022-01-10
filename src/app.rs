@@ -2,11 +2,10 @@ use crate::renderer::Renderer;
 use eframe::{egui, epi};
 use image::GenericImageView;
 
-/// We derive Deserialize/Serialize so we can persist app state on shutdown.
+// We derive Deserialize/Serialize so we can persist app state on shutdown.
+/// Entry-point for the fluid simulation application
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
-
-/// Entry-point for the fluid simulation application
 pub struct App {
     label: String,
 
