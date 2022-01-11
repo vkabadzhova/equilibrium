@@ -1,6 +1,7 @@
 use crate::fluid::Fluid;
 use crate::fluid::SimulationConfig;
 use std::fs;
+use std::sync::mpsc::Sender;
 
 /// Utility for visualization and interaction with the fluid simulation
 pub struct Renderer {
@@ -49,13 +50,14 @@ impl Renderer {
     }
 
     /// Runs the fluid simulation
-    pub fn simulate(&mut self) {
+    pub fn simulate(&mut self, tx: Sender<i64>) {
         self.fluid.init();
         for i in 0..self.fluid.simulation_configs.frames {
             self.fluid.add_noise();
             self.fluid.step();
 
             self.render_density(i);
+            tx.send(i).unwrap();
         }
     }
 }

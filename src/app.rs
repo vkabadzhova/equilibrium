@@ -1,6 +1,10 @@
 use crate::renderer::Renderer;
+use crossbeam_utils::thread;
 use eframe::{egui, epi};
 use image::GenericImageView;
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
+//use std::thread;
 
 // We derive Deserialize/Serialize so we can persist app state on shutdown.
 /// Entry-point for the fluid simulation application
@@ -31,10 +35,15 @@ impl App {
         }
     }
 
-    fn show_image(&self, frame: &epi::Frame, ui: &mut egui::Ui) {
-        let image_path = self.renderer.rendered_images_dir.clone()
+    fn show_image(
+        rendered_images_dir: &str,
+        frame_number: i64,
+        frame: &epi::Frame,
+        ui: &mut egui::Ui,
+    ) {
+        let image_path = rendered_images_dir.clone().to_owned()
             + "/density"
-            + &self.current_frame.to_string()
+            + &frame_number.to_string()
             + ".jpg";
 
         let image = image::open(image_path).unwrap();
@@ -48,6 +57,33 @@ impl App {
         let mut size = egui::Vec2::new(size.0 as f32, size.1 as f32);
         size *= (ui.available_width() / size.x).min(1.0);
         ui.image(texture_id, size);
+    }
+
+    /*
+    fn simulate(renderer: &mut Renderer, tx: Sender<i64>) {
+        crossbeam::scoped(|| {
+            renderer.simulate(tx);
+        });
+    }
+    */
+
+    fn render_live(renderer: &mut Renderer, frame: &epi::Frame, ui: &mut egui::Ui) {
+        let (tx, rx): (Sender<i64>, Receiver<i64>) = mpsc::channel();
+
+        //App::simulate(renderer, tx);
+        thread::scope(|s| {
+            s.spawn(|_| {
+                renderer.simulate(tx);
+            });
+        })
+        .unwrap();
+        let mut current_frame = rx.recv().unwrap();
+        println!("current_frame: {}", current_frame);
+        while current_frame < renderer.simulation_configs.frames - 1 {
+            App::show_image(&renderer.rendered_images_dir, current_frame, frame, ui);
+            current_frame = rx.recv().unwrap();
+            println!("current_frame: {}", current_frame);
+        }
     }
 }
 
@@ -122,7 +158,7 @@ impl epi::App for App {
             }
 
             if ui.button("Simulate fluid").clicked() {
-                self.renderer.simulate();
+                App::render_live(&mut self.renderer, frame, ui);
                 *simulated = true;
             }
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
@@ -140,20 +176,16 @@ impl epi::App for App {
             // The central panel the region left after adding TopPanel's and SidePanel's
 
             ui.heading("Welcome to the Equilibrium Fluid Simulator!");
+
             if self.simulated {
-                self.show_image(frame, ui);
-            }
-            /*
-            if *simulated {
-                ui.image(
-                    egui::TextureId::Egui,
-                    [
-                        self.renderer.fluid.simulation_configs.size as f32,
-                        self.renderer.fluid.simulation_configs.size as f32,
-                    ],
+                App::show_image(
+                    &self.renderer.rendered_images_dir,
+                    self.current_frame,
+                    frame,
+                    ui,
                 );
             }
-            */
+
             ui.hyperlink("https://github.com/vkabadzhova/equilibrium");
             ui.add(egui::github_link_file!(
                 "https://github.com/vkabadzhova/equilibrium",
