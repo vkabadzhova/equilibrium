@@ -1,3 +1,5 @@
+use crate::app::egui::ScrollArea;
+use crate::app_widgets::widgets_menu::SettingsMenu;
 use crate::renderer::Renderer;
 use crossbeam_utils::thread;
 use eframe::{egui, epi};
@@ -5,14 +7,12 @@ use image::GenericImageView;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 
-// We derive Deserialize/Serialize so we can persist app state on shutdown.
 /// Entry-point for the fluid simulation application
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
+#[cfg_attr(feature = "persistence", serde(default))]
 pub struct App {
     next_frames_count: String,
 
-    // this how you opt-out of serialization of a member
     #[cfg_attr(feature = "persistence", serde(skip))]
     current_frame: i64,
 
@@ -27,6 +27,9 @@ pub struct App {
 
     #[cfg_attr(feature = "persistence", serde(skip))]
     signal_receiver: Receiver<i64>,
+
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    settings_menu: SettingsMenu,
 }
 
 macro_rules! density_img_path {
@@ -50,6 +53,7 @@ impl App {
             is_simulated: false,
             simulation_progress: 1.0,
             signal_receiver: signal_receiver,
+            settings_menu: SettingsMenu::default(),
         }
     }
 
@@ -83,12 +87,6 @@ impl App {
     }
 
     fn render_next_received_img(&mut self, frame: &epi::Frame, ui: &mut egui::Ui) {
-        println!(
-            "self.current_frame[{}] < self.renderer.fluid.simulation_configs.frames - 1
-                && self.simulation_progress",
-            self.current_frame
-        );
-
         let mut current_frame = self.signal_receiver.try_recv().unwrap();
         self.simulation_progress += 1.0 / self.renderer.fluid.simulation_configs.frames as f32;
         if current_frame > self.current_frame {
@@ -119,16 +117,12 @@ impl epi::App for App {
         _frame: &epi::Frame,
         _storage: Option<&dyn epi::Storage>,
     ) {
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
         #[cfg(feature = "persistence")]
         if let Some(storage) = _storage {
             *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default()
         }
     }
 
-    /// Called by the frame work to save state before shutdown.
-    /// Note that you must enable the `persistence` feature for this to work.
     #[cfg(feature = "persistence")]
     fn save(&mut self, storage: &mut dyn epi::Storage) {
         epi::set_value(storage, epi::APP_KEY, self);
@@ -142,10 +136,10 @@ impl epi::App for App {
             is_simulated,
             simulation_progress,
             signal_receiver,
+            settings_menu,
         } = self;
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Exit").clicked() {
@@ -240,6 +234,51 @@ impl epi::App for App {
             ));
             egui::warn_if_debug_build(ui);
         });
+
+        egui::SidePanel::right("egui_demo_panel")
+            .min_width(150.0)
+            .default_width(180.0)
+            .show(ctx, |ui| {
+                egui::trace!(ui);
+                ui.vertical_centered(|ui| {
+                    ui.heading("✒ Settings");
+                });
+
+                ui.separator();
+
+                ScrollArea::vertical().show(ui, |ui| {
+                    use egui::special_emojis::{GITHUB, OS_APPLE, OS_LINUX, OS_WINDOWS};
+
+                    ui.vertical_centered(|ui| {
+                        ui.label("Welcome to the equilibrium fluid simulator - my high school diploma thesis.");
+
+                        ui.label(format!(
+                            "You run it on the web, or natively on {}{}{}",
+                            OS_APPLE, OS_LINUX, OS_WINDOWS,
+                        ));
+
+                        ui.hyperlink_to(
+                            format!("{} equilibrium home page", GITHUB),
+                            "https://github.com/vkabadzhova/equilibrium",
+                        );
+                    });
+
+                    ui.separator();
+                    self.settings_menu.checkboxes(ui);
+                    // add checkboxes
+                    ui.separator();
+                    // add checkboxes
+                    ui.separator();
+
+                    ui.vertical_centered(|ui| {
+                        if ui.button("Organize windows").clicked() {
+                            ui.ctx().memory().reset_areas();
+                        }
+                    });
+                });
+            });
+
+        self.settings_menu.windows(ctx);
 
         if false {
             egui::Window::new("Window").show(ctx, |ui| {
