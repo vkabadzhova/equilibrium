@@ -9,9 +9,9 @@ pub struct Renderer {
     /// The Renderer owns the fluid that it simulates
     pub fluid: Fluid,
     /// Copy of the fluid's configurations for the simulation
-    pub fluid_configs: FluidConfig,
+    pub next_fluid_configs: FluidConfig,
     /// Copy of the fluid's simulation configurations for the simulation
-    pub simulation_configs: SimulationConfig,
+    pub next_simulation_configs: SimulationConfig,
     /// The directory where the results from the simulation is stored
     pub rendered_images_dir: String,
 }
@@ -29,8 +29,8 @@ impl Renderer {
     /// Creates new Renderer
     pub fn new(fluid: Fluid) -> Renderer {
         Renderer {
-            fluid_configs: fluid.fluid_configs.clone(),
-            simulation_configs: fluid.simulation_configs.clone(),
+            next_fluid_configs: fluid.fluid_configs.clone(),
+            next_simulation_configs: fluid.simulation_configs.clone(),
             fluid: fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         }
@@ -55,7 +55,7 @@ impl Renderer {
 
     /// Runs the fluid simulation
     pub fn simulate(&mut self, tx: Sender<i64>) {
-        self.fluid = Fluid::new(self.fluid_configs, self.simulation_configs);
+        self.fluid = Fluid::new(self.next_fluid_configs, self.next_simulation_configs);
         self.fluid.init();
         for i in 0..self.fluid.simulation_configs.frames {
             self.fluid.add_noise();
