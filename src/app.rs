@@ -4,7 +4,6 @@ use eframe::{egui, epi};
 use image::GenericImageView;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-//use std::thread;
 
 // We derive Deserialize/Serialize so we can persist app state on shutdown.
 /// Entry-point for the fluid simulation application
@@ -21,31 +20,40 @@ pub struct App {
     renderer: Renderer,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
-    simulated: bool,
+    is_simulated: bool,
+
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    is_in_simulation_process: bool,
+
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    signal_receiver: Receiver<i64>,
+}
+
+macro_rules! density_img_path {
+    ($rendered_images_dir:expr, $frame_number:expr) => {
+        &($rendered_images_dir.clone().to_owned()
+            + "/density"
+            + &$frame_number.to_string()
+            + ".jpg")
+    };
 }
 
 impl App {
     /// Creates new App instance
     pub fn new(renderer: Renderer) -> Self {
+        let (_, signal_receiver) = mpsc::channel();
+
         Self {
             label: "Type frame number".to_owned(),
             current_frame: 0,
             renderer: renderer,
-            simulated: false,
+            is_simulated: false,
+            is_in_simulation_process: false,
+            signal_receiver: signal_receiver,
         }
     }
 
-    fn show_image(
-        rendered_images_dir: &str,
-        frame_number: i64,
-        frame: &epi::Frame,
-        ui: &mut egui::Ui,
-    ) {
-        let image_path = rendered_images_dir.clone().to_owned()
-            + "/density"
-            + &frame_number.to_string()
-            + ".jpg";
-
+    fn show_image(image_path: &str, frame: &epi::Frame, ui: &mut egui::Ui) {
         let image = image::open(image_path).unwrap();
         let size = image.dimensions();
 
@@ -59,31 +67,19 @@ impl App {
         ui.image(texture_id, size);
     }
 
-    /*
-    fn simulate(renderer: &mut Renderer, tx: Sender<i64>) {
-        crossbeam::scoped(|| {
-            renderer.simulate(tx);
-        });
-    }
-    */
-
-    fn render_live(renderer: &mut Renderer, frame: &epi::Frame, ui: &mut egui::Ui) {
+    fn render(renderer: &mut Renderer, frame: &epi::Frame, ui: &mut egui::Ui) -> Receiver<i64> {
         let (tx, rx): (Sender<i64>, Receiver<i64>) = mpsc::channel();
 
-        //App::simulate(renderer, tx);
-        thread::scope(|s| {
+        let total_number_of_frames = renderer.simulation_configs.frames;
+        let rendered_images_dir = renderer.rendered_images_dir.clone();
+
+        thread::scope(move |s| {
             s.spawn(|_| {
                 renderer.simulate(tx);
             });
         })
         .unwrap();
-        let mut current_frame = rx.recv().unwrap();
-        println!("current_frame: {}", current_frame);
-        while current_frame < renderer.simulation_configs.frames - 1 {
-            App::show_image(&renderer.rendered_images_dir, current_frame, frame, ui);
-            current_frame = rx.recv().unwrap();
-            println!("current_frame: {}", current_frame);
-        }
+        rx
     }
 }
 
@@ -118,7 +114,9 @@ impl epi::App for App {
             label,
             current_frame,
             renderer,
-            simulated,
+            is_simulated,
+            is_in_simulation_process,
+            signal_receiver,
         } = self;
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -158,8 +156,10 @@ impl epi::App for App {
             }
 
             if ui.button("Simulate fluid").clicked() {
-                App::render_live(&mut self.renderer, frame, ui);
-                *simulated = true;
+                *is_simulated = true;
+                *is_in_simulation_process = true;
+                *current_frame = 0;
+                self.signal_receiver = App::render(&mut self.renderer, frame, ui);
             }
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 ui.horizontal(|ui| {
@@ -173,14 +173,26 @@ impl epi::App for App {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-
             ui.heading("Welcome to the Equilibrium Fluid Simulator!");
 
-            if self.simulated {
+            if self.current_frame < self.renderer.simulation_configs.frames - 1
+                && self.is_in_simulation_process
+            {
+                let mut current_frame = self.signal_receiver.try_recv().unwrap();
+                if current_frame > self.current_frame {
+                    App::show_image(
+                        density_img_path!(&self.renderer.rendered_images_dir, current_frame),
+                        frame,
+                        ui,
+                    );
+                    self.current_frame = current_frame;
+                }
+                if current_frame == self.renderer.simulation_configs.frames - 1 {
+                    self.is_in_simulation_process = false;
+                }
+            } else if self.is_simulated {
                 App::show_image(
-                    &self.renderer.rendered_images_dir,
-                    self.current_frame,
+                    density_img_path!(&self.renderer.rendered_images_dir, self.current_frame),
                     frame,
                     ui,
                 );
