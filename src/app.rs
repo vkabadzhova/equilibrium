@@ -1,6 +1,7 @@
 use crate::renderer::Renderer;
 use crossbeam_utils::thread;
 use eframe::{egui, epi};
+use egui::Context;
 use image::GenericImageView;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -80,6 +81,30 @@ impl App {
         })
         .unwrap();
         rx
+    }
+
+    fn render_next_received_img(&mut self, frame: &epi::Frame, ui: &mut egui::Ui) {
+        println!(
+            "self.current_frame[{}] < self.renderer.simulation_configs.frames - 1
+                && self.is_in_simulation_process",
+            self.current_frame
+        );
+
+        let mut current_frame = self.signal_receiver.try_recv().unwrap();
+        if current_frame > self.current_frame {
+            App::show_image(
+                density_img_path!(&self.renderer.rendered_images_dir, current_frame),
+                frame,
+                ui,
+            );
+            self.current_frame = current_frame;
+        }
+
+        if current_frame == self.renderer.simulation_configs.frames - 1 {
+            self.is_in_simulation_process = false;
+        }
+
+        frame.request_repaint();
     }
 }
 
@@ -178,18 +203,7 @@ impl epi::App for App {
             if self.current_frame < self.renderer.simulation_configs.frames - 1
                 && self.is_in_simulation_process
             {
-                let mut current_frame = self.signal_receiver.try_recv().unwrap();
-                if current_frame > self.current_frame {
-                    App::show_image(
-                        density_img_path!(&self.renderer.rendered_images_dir, current_frame),
-                        frame,
-                        ui,
-                    );
-                    self.current_frame = current_frame;
-                }
-                if current_frame == self.renderer.simulation_configs.frames - 1 {
-                    self.is_in_simulation_process = false;
-                }
+                self.render_next_received_img(frame, ui);
             } else if self.is_simulated {
                 App::show_image(
                     density_img_path!(&self.renderer.rendered_images_dir, self.current_frame),
