@@ -1,6 +1,6 @@
-use crate::app::egui::ScrollArea;
-use crate::app_widgets::widgets_menu::SettingsMenu;
-use crate::renderer::Renderer;
+use crate::app::app::egui::ScrollArea;
+use crate::app::widgets::widgets_menu::SettingsMenu;
+use crate::simulation::renderer::Renderer;
 use crossbeam_utils::thread;
 use eframe::{egui, epi};
 use image::GenericImageView;
@@ -11,8 +11,6 @@ use std::sync::mpsc::{Receiver, Sender};
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))]
 pub struct App {
-    next_frames_count: String,
-
     #[cfg_attr(feature = "persistence", serde(skip))]
     current_frame: i64,
 
@@ -47,7 +45,6 @@ impl App {
         let (_, signal_receiver) = mpsc::channel();
 
         Self {
-            next_frames_count: "Type frame number".to_owned(),
             current_frame: 0,
             renderer: renderer,
             is_simulated: false,
@@ -71,11 +68,8 @@ impl App {
         ui.image(texture_id, size);
     }
 
-    fn render(renderer: &mut Renderer, frame: &epi::Frame, ui: &mut egui::Ui) -> Receiver<i64> {
+    fn render(renderer: &mut Renderer) -> Receiver<i64> {
         let (tx, rx): (Sender<i64>, Receiver<i64>) = mpsc::channel();
-
-        let total_number_of_frames = renderer.fluid.simulation_configs.frames;
-        let rendered_images_dir = renderer.rendered_images_dir.clone();
 
         thread::scope(move |s| {
             s.spawn(|_| {
@@ -87,7 +81,7 @@ impl App {
     }
 
     fn render_next_received_img(&mut self, frame: &epi::Frame, ui: &mut egui::Ui) {
-        let mut current_frame = self.signal_receiver.try_recv().unwrap();
+        let current_frame = self.signal_receiver.try_recv().unwrap();
         self.simulation_progress += 1.0 / self.renderer.fluid.simulation_configs.frames as f32;
         if current_frame > self.current_frame {
             App::show_image(
@@ -130,7 +124,6 @@ impl epi::App for App {
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &epi::Frame) {
         let Self {
-            next_frames_count,
             current_frame,
             renderer,
             is_simulated,
@@ -138,6 +131,8 @@ impl epi::App for App {
             signal_receiver,
             settings_menu,
         } = self;
+
+        self.renderer.update_initial_configs(&settings_menu.settings_menu);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -150,37 +145,7 @@ impl epi::App for App {
         });
 
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            ui.heading("Simulation settings");
-
-            ui.horizontal(|ui| {
-                ui.label("Number of frames: ");
-
-                ui.text_edit_singleline(next_frames_count)
-                    .on_hover_text("Should be a whole number");
-
-                self.renderer.next_simulation_configs.frames =
-                    match next_frames_count.parse::<i64>() {
-                        Ok(val) => val,
-                        Err(_) => self.renderer.fluid.simulation_configs.frames,
-                    }
-            });
-
-            if ui.button("Simulate fluid").clicked() {
-                *is_simulated = true;
-                *simulation_progress = 0.0;
-                *current_frame = 0;
-                self.signal_receiver = App::render(&mut self.renderer, frame, ui);
-            }
-
-            ui.label("Simulation Done:");
-            let progress_bar = egui::ProgressBar::new(*simulation_progress).show_percentage();
-            ui.add(progress_bar);
-
-            ui.separator();
-            ui.heading("Fluid settings");
-
-            ui.separator();
-            ui.heading("Simulation navigation");
+            ui.heading("Navigate simulation");
 
             ui.add(
                 egui::Slider::new(
@@ -196,10 +161,24 @@ impl epi::App for App {
                     *current_frame = self.renderer.fluid.simulation_configs.frames - 1;
                 }
             }
+
             if ui.button("Next").clicked() {
                 *current_frame =
                     (*current_frame + 1) % self.renderer.fluid.simulation_configs.frames;
             }
+
+            ui.separator();
+
+            if ui.button("Simulate fluid").clicked() {
+                *is_simulated = true;
+                *simulation_progress = 0.0;
+                *current_frame = 0;
+                *signal_receiver = App::render(&mut self.renderer);
+            }
+
+            ui.label("Simulation Progress:");
+            let progress_bar = egui::ProgressBar::new(*simulation_progress).show_percentage();
+            ui.add(progress_bar);
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 ui.horizontal(|ui| {
@@ -236,7 +215,7 @@ impl epi::App for App {
         });
 
         egui::SidePanel::right("egui_demo_panel")
-            .min_width(150.0)
+            .min_width(180.0)
             .default_width(180.0)
             .show(ctx, |ui| {
                 egui::trace!(ui);
@@ -265,10 +244,6 @@ impl epi::App for App {
 
                     ui.separator();
                     self.settings_menu.checkboxes(ui);
-                    // add checkboxes
-                    ui.separator();
-                    // add checkboxes
-                    ui.separator();
 
                     ui.vertical_centered(|ui| {
                         if ui.button("Organize windows").clicked() {

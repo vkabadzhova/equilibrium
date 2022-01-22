@@ -1,9 +1,9 @@
-/// The main menu window from which other settings can be pulled out via checkboxes
-pub mod widgets_menu;
-/// Menu with simulation settings such as number of frames, velocity of simulation, etc.
-pub mod simulation_configs_menu;
 /// Menu with settings for the fluid
 pub mod fluid_configs_menu;
+/// Menu with simulation settings such as number of frames, velocity of simulation, etc.
+pub mod simulation_configs_menu;
+/// The main menu window from which other settings can be pulled out via checkboxes
+pub mod widgets_menu;
 
 use eframe::egui;
 
@@ -12,7 +12,6 @@ pub trait View {
     /// The "window" of the widget which one can move around
     fn ui(&mut self, ui: &mut egui::Ui);
 }
-
 
 /// Something to view
 pub trait Setting {

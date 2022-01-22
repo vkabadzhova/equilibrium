@@ -12,3 +12,6 @@ eframe = "0.16.0"
 project-root = "0.2.2"
 crossbeam-utils = "0.8.6"
 tokio = "1.15.0"
+log = "0.4.14"
+simplelog = { version = "^0.11.0", features = ["paris"] }
+inner = "0.1.1"
