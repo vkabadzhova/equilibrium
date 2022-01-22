@@ -1,6 +1,6 @@
-use crate::fluid::Fluid;
-use crate::fluid::FluidConfig;
-use crate::fluid::SimulationConfig;
+use crate::simulation::configs::{SimulationConfigs, FluidConfigs};
+use crate::app::widgets::widgets_menu::{SettingType};
+use crate::simulation::fluid::Fluid;
 use std::fs;
 use std::sync::mpsc::Sender;
 
@@ -8,10 +8,13 @@ use std::sync::mpsc::Sender;
 pub struct Renderer {
     /// The Renderer owns the fluid that it simulates
     pub fluid: Fluid,
+
     /// Copy of the fluid's configurations for the simulation
-    pub next_fluid_configs: FluidConfig,
+    pub next_fluid_configs: FluidConfigs,
+
     /// Copy of the fluid's simulation configurations for the simulation
-    pub next_simulation_configs: SimulationConfig,
+    pub next_simulation_configs: SimulationConfigs,
+    
     /// The directory where the results from the simulation is stored
     pub rendered_images_dir: String,
 }
@@ -47,7 +50,10 @@ impl Renderer {
             *pixel = image::Rgba([(density * 255.0) as u8, 200, density as u8, 1]);
         }
 
-        fs::create_dir(&self.rendered_images_dir);
+        if !std::path::Path::new(&self.rendered_images_dir).exists(){
+        fs::create_dir(&self.rendered_images_dir)
+            .expect("Error while creating a directory to store the simulation results.");
+        }
 
         let img_name = format!("{}/density{}.jpg", &self.rendered_images_dir, frame_number);
         imgbuf.save(img_name).unwrap();
@@ -65,4 +71,20 @@ impl Renderer {
             tx.send(i).unwrap();
         }
     }
+
+    /// Updates the configurations for the next simulation. As an example,
+    /// during rendering, the configurations new configurations may be saved in
+    /// the renderer, but will only be applied after the beginning of the next simulation
+    pub fn update_initial_configs(&mut self, settings_menu: &Vec<SettingType>) {
+        for setting in settings_menu.iter() {
+        match setting {
+            SettingType::Fluid(fluid_ui_config) => self.next_fluid_configs = fluid_ui_config.fluid_configs,
+            SettingType::Simulation(simulation_ui_config) => self.next_simulation_configs = simulation_ui_config.simulation_configs
+        }
+        /*
+        self.next_simulation_configs = next_simulation_configs;
+        self.next_fluid_configs = next_fluid_configs;
+        */
+    }
+}
 }

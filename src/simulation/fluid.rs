@@ -1,61 +1,8 @@
+use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use geo::algorithm::rotate::RotatePoint;
 use geo::{line_string, point};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
-
-/// Major configurations in order to run the simulation
-#[derive(Copy, Clone)]
-pub struct SimulationConfig {
-    /// The size of each step
-    pub delta_t: f32,
-    /// Number of frames to be simulated
-    pub frames: i64,
-    /// Current step
-    t: f32,
-    /// The size of the fluid. A square container is used
-    pub size: u32,
-}
-
-impl Default for SimulationConfig {
-    fn default() -> SimulationConfig {
-        SimulationConfig {
-            delta_t: 0.02,
-            frames: 16,
-            t: 0.0,
-            size: 128,
-        }
-    }
-}
-
-impl SimulationConfig {
-    /// Creates new SimulationConfig struct
-    pub fn new(delta_t: f32, frames: i64, fluid_container_size: u32) -> Self {
-        SimulationConfig {
-            delta_t: delta_t,
-            frames: frames,
-            t: 0.0,
-            size: fluid_container_size,
-        }
-    }
-}
-
-/// Struct describing general fluid-related configurations
-#[derive(Copy, Clone)]
-pub struct FluidConfig {
-    ///fluid's diffusion
-    pub diffusion: f32,
-    ///fluid's viscousity
-    pub viscousity: f32,
-}
-
-impl Default for FluidConfig {
-    fn default() -> FluidConfig {
-        FluidConfig {
-            diffusion: 0.0,
-            viscousity: 0.0000001,
-        }
-    }
-}
 
 /// Address the direction in world-directions style
 /// similliar to: mid-point line generation algorithm, etc.
@@ -77,9 +24,9 @@ macro_rules! idx {
 /// The struct that is responsible for simulating the fluid's behavour
 pub struct Fluid {
     /// general configurations for the simulated fluid
-    pub fluid_configs: FluidConfig,
+    pub fluid_configs: FluidConfigs,
     /// general configurations for the simulation itself
-    pub simulation_configs: SimulationConfig,
+    pub simulation_configs: SimulationConfigs,
     s: Vec<f32>,
     /// the distributed densities for the given step
     pub density: Vec<f32>,
@@ -97,7 +44,7 @@ pub struct Fluid {
 
 impl Fluid {
     /// Creates new Fluid struct
-    pub fn new(init_fluid: FluidConfig, init_simulation: SimulationConfig) -> Self {
+    pub fn new(init_fluid: FluidConfigs, init_simulation: SimulationConfigs) -> Self {
         let fluid_field_size = (init_simulation.size * init_simulation.size) as usize;
 
         Fluid {
@@ -405,20 +352,24 @@ impl Fluid {
     /// simulation yet.
     pub fn add_noise(&mut self) {
         let perlin = Perlin::new();
-        let t_f64 = self.simulation_configs.t as f64;
+        //let t_f64 = self.simulation_configs.t as f64;
 
-        let angle = perlin.get([t_f64, t_f64]) * 6.28 * 2f64;
+        let angle = perlin.get([
+            self.simulation_configs.delta_t as f64,
+            self.simulation_configs.delta_t as f64,
+        ]) * 6.28
+            * 2f64;
         let rand_x = rand::thread_rng().gen_range(0..self.simulation_configs.size);
         let rand_y = rand::thread_rng().gen_range(0..self.simulation_configs.size);
 
         let center_point = point!(x: (self.simulation_configs.size/2) as f32, y: (self.simulation_configs.size/2) as f32);
-        let point_of_rotation = point!(x: rand_x as f32, y: rand_y as f32);
+        let _point_of_rotation = point!(x: rand_x as f32, y: rand_y as f32);
 
         let ls = line_string![(x: (self.simulation_configs.size/2) as f32, y: (self.simulation_configs.size/2) as f32), (x: rand_x as f32, y: rand_y as f32)];
 
         let rotated = ls.rotate_around_point(angle as f32, center_point);
 
-        self.simulation_configs.t += 0.01;
+        //self.simulation_configs.t += 0.01;
 
         self.add_velocity(
             center_point.x().trunc() as u32,
