@@ -5,11 +5,6 @@ use crate::simulation::configs::{FluidConfigs};
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct FluidUiSettings {
     enabled: bool,
-    // TODO: add colors to the fluidConfig in the renderer
-    /// Modify fluid's color in simulation
-    pub fluid_color: egui::Color32,
-    /// Modify world's simulation color
-    pub world_color: egui::Color32,
     /// The fluid configurations
     pub fluid_configs: FluidConfigs,
 }
@@ -18,8 +13,6 @@ impl Default for FluidUiSettings {
     fn default() -> Self {
         Self {
             enabled: true,
-            fluid_color: egui::Color32::LIGHT_BLUE.linear_multiply(0.5),
-            world_color: egui::Color32::LIGHT_BLUE.linear_multiply(0.5),
             fluid_configs: FluidConfigs::default()
         }
     }
@@ -60,8 +53,6 @@ impl FluidUiSettings {
     fn gallery_grid_contents(&mut self, ui: &mut egui::Ui) {
         let Self {
             enabled: _,
-            fluid_color,
-            world_color,
             fluid_configs,
         } = self;
 
@@ -76,11 +67,11 @@ impl FluidUiSettings {
         ui.end_row();
 
         ui.label("Choose fluid color");
-        ui.color_edit_button_srgba(fluid_color);
+        ui.color_edit_button_srgba(&mut fluid_configs.fluid_color);
         ui.end_row();
 
         ui.label("Choose world color");
-        ui.color_edit_button_srgba(world_color);
+        ui.color_edit_button_srgba(&mut fluid_configs.world_color);
         ui.end_row();
 
         ui.hyperlink_to("Viscousity", "https://en.wikipedia.org/wiki/Viscosity");

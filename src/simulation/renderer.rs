@@ -40,6 +40,20 @@ impl Renderer {
     }
 
     fn render_density(&self, frame_number: i64) {
+        let world_rgba = [
+            self.fluid.fluid_configs.world_color.r(),
+            self.fluid.fluid_configs.world_color.g(),
+            self.fluid.fluid_configs.world_color.b(),
+            self.fluid.fluid_configs.world_color.a(),
+        ];
+
+        let fluid_rgba = [
+            self.fluid.fluid_configs.fluid_color.r(),
+            self.fluid.fluid_configs.fluid_color.g(),
+            self.fluid.fluid_configs.fluid_color.b(),
+            self.fluid.fluid_configs.fluid_color.a(),
+        ];
+
         let mut imgbuf = image::ImageBuffer::new(
             self.fluid.simulation_configs.size,
             self.fluid.simulation_configs.size,
@@ -47,7 +61,11 @@ impl Renderer {
 
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.fluid.density[idx!(x, y, self.fluid.simulation_configs.size)];
-            *pixel = image::Rgba([(density * 255.0) as u8, 200, density as u8, 1]);
+            if density != 0.0 {
+                *pixel = image::Rgba([(density * fluid_rgba[0] as f32) as u8, fluid_rgba[1], density as u8, 1]);
+            } else {
+                *pixel = image::Rgba(world_rgba);
+            }
         }
 
         if !std::path::Path::new(&self.rendered_images_dir).exists(){
