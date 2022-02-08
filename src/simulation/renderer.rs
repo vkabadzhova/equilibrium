@@ -64,7 +64,9 @@ impl Renderer {
         self.fluid = Fluid::new(self.next_fluid_configs, self.next_simulation_configs);
         self.fluid.init();
         for i in 0..self.fluid.simulation_configs.frames {
-            self.fluid.add_noise();
+            if self.fluid.fluid_configs.has_perlin_noise {
+                self.fluid.add_noise();
+            }
             self.fluid.step();
 
             self.render_density(i);

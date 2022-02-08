@@ -5,8 +5,6 @@ use crate::simulation::configs::{FluidConfigs};
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct FluidUiSettings {
     enabled: bool,
-    /// Setting for [`Fluid::add_noise()`][crate::simulation::fluid::Fluid::add_noise()]
-    pub add_random_noise: bool,
     // TODO: add colors to the fluidConfig in the renderer
     /// Modify fluid's color in simulation
     pub fluid_color: egui::Color32,
@@ -20,13 +18,9 @@ impl Default for FluidUiSettings {
     fn default() -> Self {
         Self {
             enabled: true,
-            add_random_noise: false,
             fluid_color: egui::Color32::LIGHT_BLUE.linear_multiply(0.5),
             world_color: egui::Color32::LIGHT_BLUE.linear_multiply(0.5),
-            fluid_configs: FluidConfigs {
-                diffusion: 0.42,
-                viscousity: 0.3
-            }
+            fluid_configs: FluidConfigs::default()
         }
     }
 }
@@ -66,7 +60,6 @@ impl FluidUiSettings {
     fn gallery_grid_contents(&mut self, ui: &mut egui::Ui) {
         let Self {
             enabled: _,
-            add_random_noise,
             fluid_color,
             world_color,
             fluid_configs,
@@ -79,7 +72,7 @@ impl FluidUiSettings {
         ui.end_row();
 
         ui.label("Add perlin noise to simulation");
-        ui.checkbox(add_random_noise, "");
+        ui.checkbox(&mut fluid_configs.has_perlin_noise, "");
         ui.end_row();
 
         ui.label("Choose fluid color");

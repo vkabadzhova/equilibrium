@@ -33,17 +33,20 @@ impl SimulationConfigs {
 /// Struct describing general fluid-related configurations
 #[derive(Copy, Clone)]
 pub struct FluidConfigs {
-    ///fluid's diffusion
+    /// Fluid's diffusion
     pub diffusion: f32,
-    ///fluid's viscousity
+    /// Fluid's viscousity
     pub viscousity: f32,
+    /// Shows if random perlin noise is enabled
+    pub has_perlin_noise: bool,
 }
 
 impl Default for FluidConfigs {
     fn default() -> FluidConfigs {
         FluidConfigs {
             diffusion: 0.0,
-            viscousity: 0.0000001,
+            viscousity: 0.001,
+            has_perlin_noise: true,
         }
     }
 }
