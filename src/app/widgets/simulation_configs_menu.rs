@@ -1,5 +1,5 @@
+use crate::simulation::configs::SimulationConfigs;
 use eframe::egui;
-use crate::simulation::configs::{SimulationConfigs};
 
 /// Shows off one example of each major type of widget.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -13,7 +13,7 @@ impl Default for SimulationUiSettings {
     fn default() -> Self {
         Self {
             enabled: true,
-            simulation_configs: SimulationConfigs::default()
+            simulation_configs: SimulationConfigs::default(),
         }
     }
 }
@@ -38,7 +38,6 @@ impl super::Setting for SimulationUiSettings {
 impl super::View for SimulationUiSettings {
     fn ui(&mut self, ui: &mut egui::Ui) {
         ui.add_enabled_ui(self.enabled, |ui| {
-
             egui::Grid::new("my_grid")
                 .num_columns(2)
                 .spacing([40.0, 4.0])
@@ -51,8 +50,9 @@ impl super::View for SimulationUiSettings {
         ui.separator();
 
         ui.horizontal(|ui| {
-                ui.checkbox(&mut self.enabled, "Interactive")
-                    .on_hover_text("Uncheck to disable the widget so you could inspect the simulation securely.");
+            ui.checkbox(&mut self.enabled, "Interactive").on_hover_text(
+                "Uncheck to disable the widget so you could inspect the simulation securely.",
+            );
         });
 
         ui.separator();
@@ -80,7 +80,7 @@ impl SimulationUiSettings {
         ui.end_row();
 
         ui.label("Simulation step (delta_t)")
-                .on_hover_text("delta_t");
+            .on_hover_text("delta_t");
         ui.add(egui::DragValue::new(&mut simulation_configs.delta_t).speed(0.01));
         if simulation_configs.delta_t < 0.0 {
             simulation_configs.delta_t = 0.00;
@@ -90,7 +90,7 @@ impl SimulationUiSettings {
         ui.label("Simulation window size");
         ui.add(egui::DragValue::new(&mut simulation_configs.size).speed(1.0));
         if simulation_configs.size < 128 {
-            simulation_configs.size = 128 ;
+            simulation_configs.size = 128;
         }
         ui.end_row();
     }

@@ -1,5 +1,5 @@
+use crate::simulation::configs::FluidConfigs;
 use eframe::egui;
-use crate::simulation::configs::{FluidConfigs};
 
 /// Shows off one example of each major type of widget.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -13,7 +13,7 @@ impl Default for FluidUiSettings {
     fn default() -> Self {
         Self {
             enabled: true,
-            fluid_configs: FluidConfigs::default()
+            fluid_configs: FluidConfigs::default(),
         }
     }
 }

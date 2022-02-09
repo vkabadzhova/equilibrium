@@ -102,7 +102,7 @@ impl App {
 
 impl epi::App for App {
     fn name(&self) -> &str {
-        "eframe template"
+        "The Equilibrium Fluid Simulator"
     }
 
     fn setup(
@@ -132,7 +132,8 @@ impl epi::App for App {
             settings_menu,
         } = self;
 
-        self.renderer.update_initial_configs(&settings_menu.settings_menu);
+        self.renderer
+            .update_initial_configs(&settings_menu.settings_menu);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
