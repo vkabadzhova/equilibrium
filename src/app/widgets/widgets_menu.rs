@@ -1,8 +1,8 @@
+use super::fluid_configs_menu::FluidUiSettings;
+use super::simulation_configs_menu::SimulationUiSettings;
 use super::Setting;
 use eframe::egui;
 use std::collections::BTreeSet;
-use super::simulation_configs_menu::SimulationUiSettings;
-use super::fluid_configs_menu::FluidUiSettings;
 
 /// Enum describing the various widgets' types. This is what unifies all the widgets
 /// and is used fot storing them in collections.
@@ -43,7 +43,9 @@ pub struct SettingsMenu {
 impl Default for SettingsMenu {
     fn default() -> Self {
         Self::from_settings(vec![
-            SettingType::Simulation(super::simulation_configs_menu::SimulationUiSettings::default()),
+            SettingType::Simulation(
+                super::simulation_configs_menu::SimulationUiSettings::default(),
+            ),
             SettingType::Fluid(super::fluid_configs_menu::FluidUiSettings::default()),
         ])
     }
