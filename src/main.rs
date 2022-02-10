@@ -24,7 +24,6 @@ fn main() {
     .unwrap();
 
     let fluid_configs = FluidConfigs::default();
-
     let simulation_configs = SimulationConfigs::default();
 
     let fluid = Fluid::new(fluid_configs, simulation_configs);

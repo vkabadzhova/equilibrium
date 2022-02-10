@@ -3,6 +3,7 @@ use eframe::egui;
 
 /// Shows off one example of each major type of widget.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Copy, Clone)]
 pub struct SimulationUiSettings {
     enabled: bool,
     /// The configurations for the simulation

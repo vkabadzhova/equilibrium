@@ -55,10 +55,6 @@ impl Default for FluidConfigs {
             has_perlin_noise: true,
             fluid_color: Color32::from_rgba_premultiplied(208, 88, 157, 220),
             world_color: Color32::from_rgba_premultiplied(94, 146, 162, 128),
-            /*
-            fluid_color: Color32::GOLD.linear_multiply(0.5),
-            world_color: Color32::LIGHT_BLUE.linear_multiply(0.5),
-            */
         }
     }
 }

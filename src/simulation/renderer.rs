@@ -4,31 +4,31 @@ use crate::simulation::fluid::Fluid;
 use std::fs;
 use std::sync::mpsc::Sender;
 
-/// Utility for visualization and interaction with the fluid simulation. 
+/// Utility for visualization and interaction with the fluid simulation.
 ///
-/// There are two ways to modify the simulation’s parameters while the simulation is 
-/// going: to rerun the simulation from the beginning, or two continue it with 
+/// There are two ways to modify the simulation’s parameters while the simulation is
+/// going: to rerun the simulation from the beginning, or two continue it with
 /// the newly added parameters. Therefore parameters of the type `next_*_configs`
 /// are used. In the first case, they are updating the current state of the
-/// renderer live during the simulation (the current state is stored in the 
-/// struct’s member [`fluid`](crate::simulation::renderer::Renderer::fluid)), or, 
-/// otherwise, update it at the **beginning** of the new simulation (i.e. 
-/// frame 0). 
+/// renderer live during the simulation (the current state is stored in the
+/// struct’s member [`fluid`](crate::simulation::renderer::Renderer::fluid)), or,
+/// otherwise, update it at the **beginning** of the new simulation (i.e.
+/// frame 0).
 pub struct Renderer {
     /// The Renderer owns the fluid that it simulates
     pub fluid: Fluid,
 
-    /// The fluid configurations for the next run (either the next initial configs or 
-    /// live change of the current (depending on the configs. See the documentation 
+    /// The fluid configurations for the next run (either the next initial configs or
+    /// live change of the current (depending on the configs. See the documentation
     /// of the [`Renderer`] struct)
     pub next_fluid_configs: FluidConfigs,
 
-    /// The simulation configurations for the next run (either the next initial configs or 
-    /// live change of the current (depending on the configs. See the documentation 
+    /// The simulation configurations for the next run (either the next initial configs or
+    /// live change of the current (depending on the configs. See the documentation
     /// of the [`Renderer`] struct)
     pub next_simulation_configs: SimulationConfigs,
 
-    /// The directory in which the rendered images that result from the simulation 
+    /// The directory in which the rendered images that result from the simulation
     /// are stored
     pub rendered_images_dir: String,
 }
@@ -125,5 +125,46 @@ impl Renderer {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::app::widgets::fluid_configs_menu::FluidUiSettings;
+    use crate::app::widgets::simulation_configs_menu::SimulationUiSettings;
+    use crate::app::widgets::widgets_menu::{SettingsMenu, SettingType};
+    use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
+    use crate::simulation::{fluid::Fluid, renderer::Renderer};
+    use eframe::egui::Color32;
+
+    #[test]
+    fn update_initial_configs_works() {
+        //---------- Init renderer -----------
+        let fluid_configs = FluidConfigs::default();
+        let simulation_configs = SimulationConfigs::default();
+
+        let fluid = Fluid::new(fluid_configs, simulation_configs);
+        let mut renderer = Renderer::new(fluid);
+
+        // assert it is correctly configured for the test
+        assert_ne!(renderer.fluid.fluid_configs.diffusion, 0.4212312);
+
+        //---------- Init SettingMenu -----------
+        let simulation_ui_setting = SimulationUiSettings::default();
+        let mut fluid_ui_setting = FluidUiSettings::default();
+
+        fluid_ui_setting.fluid_configs.diffusion = 0.4212312;
+
+        // assert it is correctly configured for the test
+        assert_eq!(fluid_ui_setting.fluid_configs.diffusion, 0.4212312);
+
+        let settings_menu = SettingsMenu::from_settings(vec![
+            SettingType::Fluid(fluid_ui_setting),
+        ], false);
+
+        //---------- Test's purpouse -----------
+        renderer.update_initial_configs(&settings_menu.settings_menu);
+
+        assert_eq!(renderer.next_fluid_configs.diffusion, 0.4212312);
     }
 }

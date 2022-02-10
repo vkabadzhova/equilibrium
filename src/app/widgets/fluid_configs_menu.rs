@@ -3,6 +3,7 @@ use eframe::egui;
 
 /// Shows off one example of each major type of widget.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Copy, Clone)]
 pub struct FluidUiSettings {
     enabled: bool,
     /// The fluid configurations

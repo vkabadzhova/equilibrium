@@ -47,19 +47,31 @@ impl Default for SettingsMenu {
                 super::simulation_configs_menu::SimulationUiSettings::default(),
             ),
             SettingType::Fluid(super::fluid_configs_menu::FluidUiSettings::default()),
-        ])
+        ], true)
     }
 }
 
 impl SettingsMenu {
-    /// The starting window
-    pub fn from_settings(settings_menu: Vec<SettingType>) -> Self {
+    /// Configure the GUI
+    ///
+    /// The function creates [`SettingsMenu`] from given vector of checkbox menus which 
+    /// are located in the most right part of the application (see the application interface
+    /// and the picture below)
+    ///
+    /// * `settings_menu` - collection of all the menus
+    /// * `should_open_first` - the first setting can be automatically opened every 
+    /// time the application is started. This parameter defines if this should be the case.
+    ///
+    /// <a href="https://imgbb.com/"><img src="https://i.ibb.co/0qNLXV0/checkbox-menus.png" alt="checkbox-menus" border="0"></a><br />
+    pub fn from_settings(settings_menu: Vec<SettingType>, should_open_first: bool) -> Self {
         let mut open = BTreeSet::new();
-        open.insert(
-            super::simulation_configs_menu::SimulationUiSettings::default()
-                .name()
-                .to_owned(),
-        );
+        if should_open_first {
+            open.insert(
+                super::simulation_configs_menu::SimulationUiSettings::default()
+                    .name()
+                    .to_owned(),
+            );
+        }
 
         Self {
             settings_menu,
@@ -101,5 +113,19 @@ fn set_open(open: &mut BTreeSet<String>, key: &'static str, is_open: bool) {
         }
     } else {
         open.remove(key);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::app::widgets::widgets_menu::FluidUiSettings;
+    use crate::app::widgets::widgets_menu::SettingType;
+    use crate::app::widgets::Setting;
+
+    #[test]
+    fn settingtype_name_works() {
+        let fluid_ui_setting = FluidUiSettings::default();
+        let fluid_setting_type = SettingType::Fluid(fluid_ui_setting);
+        assert_eq!(fluid_setting_type.name(), fluid_ui_setting.name());
     }
 }
