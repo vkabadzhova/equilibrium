@@ -11,18 +11,65 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
+  check_default:
+    name: cargo check (default features)
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
-    - name: Check 
-      run: cargo check --all-targets 
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.56.0
+          override: true
+      - run: sudo apt-get update && sudo apt-get install libspeechd-dev
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
 
-  tests:
+  check_all_features:
+    name: cargo check --all-features
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
-    - name: Run tests 
-      run: cargo check --all-targets 
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.56.0
+          override: true
+      - run: sudo apt-get update && sudo apt-get install libspeechd-dev
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --all-features
+
+  test:
+    name: cargo test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.56.0
+          override: true
+      - run: sudo apt-get update && sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev libgtk-3-dev # libgtk-3-dev is used by rfd
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
+
+  fmt:
+    name: cargo fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.56.0
+          override: true
+      - run: rustup component add rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
