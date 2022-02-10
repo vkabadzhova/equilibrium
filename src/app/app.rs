@@ -264,5 +264,17 @@ impl epi::App for App {
                 ui.label("You would normally chose either panels OR windows.");
             });
         }
-    }
+    }  
 }
+
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn density_img_path_str_works() {
+        assert_eq!(density_img_path!("holiday_dir", 0), "holiday_dir/density0.jpg");
+    }
+
+}
+
