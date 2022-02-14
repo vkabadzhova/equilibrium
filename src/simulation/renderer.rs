@@ -4,6 +4,19 @@ use crate::simulation::fluid::Fluid;
 use std::fs;
 use std::sync::mpsc::Sender;
 
+/// Creates a name of the a rendered density file based on the frame number and 
+/// a given directory
+macro_rules! density_img_path {
+    ($rendered_images_dir:expr, $frame_number:expr) => {
+        &($rendered_images_dir.clone().to_owned()
+            + "/density"
+            + &$frame_number.to_string()
+            + ".jpg")
+    };
+}
+
+pub(crate) use density_img_path;
+
 /// Utility for visualization and interaction with the fluid simulation.
 ///
 /// There are two ways to modify the simulation’s parameters while the simulation is
@@ -92,8 +105,7 @@ impl Renderer {
                 .expect("Error while creating a directory to store the simulation results.");
         }
 
-        let img_name = format!("{}/density{}.jpg", &self.rendered_images_dir, frame_number);
-        imgbuf.save(img_name).unwrap();
+        imgbuf.save(density_img_path!(self.rendered_images_dir, frame_number)).unwrap();
     }
 
     /// Runs the fluid simulation

@@ -1,6 +1,7 @@
 use crate::app::app::egui::ScrollArea;
 use crate::app::widgets::widgets_menu::SettingsMenu;
 use crate::simulation::renderer::Renderer;
+use crate::simulation::renderer::density_img_path;
 use crossbeam_utils::thread;
 use eframe::{egui, epi};
 use image::GenericImageView;
@@ -30,14 +31,6 @@ pub struct App {
     settings_menu: SettingsMenu,
 }
 
-macro_rules! density_img_path {
-    ($rendered_images_dir:expr, $frame_number:expr) => {
-        &($rendered_images_dir.clone().to_owned()
-            + "/density"
-            + &$frame_number.to_string()
-            + ".jpg")
-    };
-}
 
 impl App {
     /// Creates new App instance
@@ -270,6 +263,8 @@ impl epi::App for App {
 
 #[cfg(test)]
 mod tests {
+
+    use crate::simulation::renderer::density_img_path;
 
     #[test]
     fn density_img_path_str_works() {
