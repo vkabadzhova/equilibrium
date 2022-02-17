@@ -42,24 +42,27 @@ pub struct SettingsMenu {
 
 impl Default for SettingsMenu {
     fn default() -> Self {
-        Self::from_settings(vec![
-            SettingType::Simulation(
-                super::simulation_configs_menu::SimulationUiSettings::default(),
-            ),
-            SettingType::Fluid(super::fluid_configs_menu::FluidUiSettings::default()),
-        ], true)
+        Self::from_settings(
+            vec![
+                SettingType::Simulation(
+                    super::simulation_configs_menu::SimulationUiSettings::default(),
+                ),
+                SettingType::Fluid(super::fluid_configs_menu::FluidUiSettings::default()),
+            ],
+            true,
+        )
     }
 }
 
 impl SettingsMenu {
     /// Configure the GUI
     ///
-    /// The function creates [`SettingsMenu`] from given vector of checkbox menus which 
+    /// The function creates [`SettingsMenu`] from given vector of checkbox menus which
     /// are located in the most right part of the application (see the application interface
     /// and the picture below)
     ///
     /// * `settings_menu` - collection of all the menus
-    /// * `should_open_first` - the first setting can be automatically opened every 
+    /// * `should_open_first` - the first setting can be automatically opened every
     /// time the application is started. This parameter defines if this should be the case.
     ///
     /// <a href="https://imgbb.com/"><img src="https://i.ibb.co/0qNLXV0/checkbox-menus.png" alt="checkbox-menus" border="0"></a><br />

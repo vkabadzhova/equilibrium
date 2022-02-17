@@ -1,7 +1,7 @@
 use crate::app::app::egui::ScrollArea;
 use crate::app::widgets::widgets_menu::SettingsMenu;
-use crate::simulation::renderer::Renderer;
 use crate::simulation::renderer::density_img_path;
+use crate::simulation::renderer::Renderer;
 use crossbeam_utils::thread;
 use eframe::{egui, epi};
 use image::GenericImageView;
@@ -30,7 +30,6 @@ pub struct App {
     #[cfg_attr(feature = "persistence", serde(skip))]
     settings_menu: SettingsMenu,
 }
-
 
 impl App {
     /// Creates new App instance
@@ -257,9 +256,8 @@ impl epi::App for App {
                 ui.label("You would normally chose either panels OR windows.");
             });
         }
-    }  
+    }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -268,8 +266,9 @@ mod tests {
 
     #[test]
     fn density_img_path_str_works() {
-        assert_eq!(density_img_path!("holiday_dir", 0), "holiday_dir/density0.jpg");
+        assert_eq!(
+            density_img_path!("holiday_dir", 0),
+            "holiday_dir/density0.jpg"
+        );
     }
-
 }
-

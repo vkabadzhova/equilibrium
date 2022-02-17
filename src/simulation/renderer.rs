@@ -4,7 +4,7 @@ use crate::simulation::fluid::Fluid;
 use std::fs;
 use std::sync::mpsc::Sender;
 
-/// Creates a name of the a rendered density file based on the frame number and 
+/// Creates a name of the a rendered density file based on the frame number and
 /// a given directory
 macro_rules! density_img_path {
     ($rendered_images_dir:expr, $frame_number:expr) => {
@@ -105,7 +105,9 @@ impl Renderer {
                 .expect("Error while creating a directory to store the simulation results.");
         }
 
-        imgbuf.save(density_img_path!(self.rendered_images_dir, frame_number)).unwrap();
+        imgbuf
+            .save(density_img_path!(self.rendered_images_dir, frame_number))
+            .unwrap();
     }
 
     /// Runs the fluid simulation
@@ -144,7 +146,7 @@ impl Renderer {
 mod tests {
     use crate::app::widgets::fluid_configs_menu::FluidUiSettings;
     use crate::app::widgets::simulation_configs_menu::SimulationUiSettings;
-    use crate::app::widgets::widgets_menu::{SettingsMenu, SettingType};
+    use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
     use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
     use crate::simulation::{fluid::Fluid, renderer::Renderer};
     use eframe::egui::Color32;
@@ -170,9 +172,8 @@ mod tests {
         // assert it is correctly configured for the test
         assert_eq!(fluid_ui_setting.fluid_configs.diffusion, 0.4212312);
 
-        let settings_menu = SettingsMenu::from_settings(vec![
-            SettingType::Fluid(fluid_ui_setting),
-        ], false);
+        let settings_menu =
+            SettingsMenu::from_settings(vec![SettingType::Fluid(fluid_ui_setting)], false);
 
         //---------- Test's purpouse -----------
         renderer.update_initial_configs(&settings_menu.settings_menu);
