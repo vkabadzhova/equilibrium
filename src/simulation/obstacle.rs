@@ -1,56 +1,86 @@
-use super::fluid::ContainerWall;
-use line_drawing::Bresenham;
 use std::collections::HashMap;
 
-/// Various obstacles defined by a vector with their points can be put into the simulation,
-/// as long as the obstacle's points are inside the fluid's container. The fluid will avoid those.
-pub struct Obstacle {
-    /// The points by which the obstacle is defined
-    pub vertices: Vec<line_drawing::Point<i32>>,
-    /// Collection of all contour lines ("edges") that the container have.
-    pub countour_points: Vec<Vec<line_drawing::Point<i32>>>,
+use line_drawing::Bresenham;
+
+use super::fluid::ContainerWall;
+
+/// Defines every obstacle's behaviour
+pub trait Obstacle {
+    /// Verifies if all points in given vector are in the fluid's field
+    fn are_all_points_valid(&self, fluid_container_size: i64) -> bool;
+
+    /// Returns all countour points with their direction
+    fn get_sides_direction(&self) -> HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>;
 }
 
-impl Obstacle {
-    fn generate_countour_lines(
-        vertices: &Vec<line_drawing::Point<i32>>,
-    ) -> Vec<Vec<line_drawing::Point<i32>>> {
-        let mut result: Vec<Vec<line_drawing::Point<i32>>> = Vec::new();
-        for point in vertices.iter() {
-            let next_point = match vertices.iter().next() {
-                Some(val) => *val,
-                None => continue,
-            };
+/// Rectangle obstacle which is fit parallely with respect to the
+/// coordinate system
+pub struct Rectangle {
+    up_left_point: line_drawing::Point<i64>,
+    down_right_point: line_drawing::Point<i64>,
+}
 
-            result.push(Bresenham::new(*point, next_point).into_iter().collect());
-        }
+impl Obstacle for Rectangle {
+    fn are_all_points_valid(&self, fluid_container_size: i64) -> bool {
+        self.up_left_point.0 != self.down_right_point.0
+            && self.up_left_point.1 != self.down_right_point.1
+            && vec![
+                self.up_left_point.0,
+                self.up_left_point.1,
+                self.down_right_point.0,
+                self.down_right_point.1,
+            ]
+            .iter()
+            .all(|e| *e < fluid_container_size)
+    }
+
+    fn get_sides_direction(&self) -> HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
+        let mut result: HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> = HashMap::new();
+
+        // North wall
+        result.insert(
+            ContainerWall::North,
+            Bresenham::new(
+                self.up_left_point,
+                (self.down_right_point.0, self.up_left_point.1),
+            )
+            .into_iter()
+            .collect(),
+        );
+
+        // South wall
+        result.insert(
+            ContainerWall::South,
+            Bresenham::new(
+                self.down_right_point,
+                (self.up_left_point.0, self.down_right_point.1),
+            )
+            .into_iter()
+            .collect(),
+        );
+
+        // West wall
+        result.insert(
+            ContainerWall::West,
+            Bresenham::new(
+                self.up_left_point,
+                (self.up_left_point.0, self.down_right_point.1),
+            )
+            .into_iter()
+            .collect(),
+        );
+
+        // East wall
+        result.insert(
+            ContainerWall::East,
+            Bresenham::new(
+                self.down_right_point,
+                (self.down_right_point.0, self.up_left_point.1),
+            )
+            .into_iter()
+            .collect(),
+        );
+
         result
-    }
-
-    /// Create new obstacle
-    pub fn new(points: Vec<line_drawing::Point<i32>>) -> Self {
-        Self {
-            countour_points: Obstacle::generate_countour_lines(&points),
-            vertices: points,
-        }
-    }
-
-    /// Verifies if all points in given vector are in the fluid's field
-    pub fn are_all_points_valid(&self, fluid_container_size: u32) -> bool {
-        let container_size = i64::from(fluid_container_size);
-        for point in self.vertices.iter() {
-            if i64::from(point.0) >= container_size || i64::from(point.1) >= container_size {
-                return false;
-            }
-        }
-        true
-    }
-
-    /// Determines the type of all the points that lie on a line between the output's tuple points.
-    /// The line is found via the Bresenhams' algorithm.
-    /// 
-    /// *Returns:* HashMap with the <`index in the self.countour_points vector`, `wall type`>. 
-    pub fn determine_sides(&self) -> HashMap<u16, ContainerWall> {
-        unimplemented!();
     }
 }

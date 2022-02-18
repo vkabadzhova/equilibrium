@@ -1,4 +1,4 @@
-use super::obstacle::Obstacle;
+use super::obstacle::{self, Obstacle};
 use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use geo::algorithm::rotate::RotatePoint;
 use geo::{line_string, point};
@@ -8,7 +8,7 @@ use std::result;
 
 /// Address the direction in world-directions style
 /// similliar to: mid-point line generation algorithm, etc.
-#[derive(PartialEq, Eq, Copy, Clone)]
+#[derive(PartialEq, Eq, Copy, Clone, Hash)]
 pub enum ContainerWall {
     /// the side which is parallel to Ox and has lowest x values
     /// in the coordinate system
@@ -38,8 +38,8 @@ pub enum ContainerWall {
     /// and whose average point's y coordinate is on left of the obstacle's
     /// horizontal mediana is considered NorthEast.
     SouthWest,
-    /// No wall variant. See [`set_boundaries`].
-    NoWall,
+    /// Deafult wall variant. See [`set_boundaries`].
+    DefaultWall,
 }
 
 macro_rules! idx {
@@ -68,9 +68,8 @@ pub struct Fluid {
     velocities_x0: Vec<f32>,
     velocities_y0: Vec<f32>,
     /// Defines which cells are "allowed" for the fluid to run into and which are "obsticles"
-    /// * true - the cell is available for the fluid
-    /// * false - the cell is not available
-    allowed_cells: Vec<bool>,
+    /// by also defining which side of a given obstacle a cell is via the [`ContainerWall`]
+    allowed_cells: Vec<ContainerWall>,
 }
 
 impl Fluid {
@@ -85,7 +84,7 @@ impl Fluid {
             velocities_y: vec![0.0; fluid_field_size],
             velocities_x0: vec![0.0; fluid_field_size],
             velocities_y0: vec![0.0; fluid_field_size],
-            allowed_cells: vec![true; fluid_field_size],
+            allowed_cells: vec![ContainerWall::DefaultWall; fluid_field_size],
             fluid_configs: init_fluid,
             simulation_configs: init_simulation,
         }
@@ -106,7 +105,7 @@ impl Fluid {
     /// Process the edge walls, a.k.a. turn the velocities in the opposite way
     /// The function is used not only for velocities, but for density, etc, where
     /// A turn would have no meaning at all or will cause logical errors.
-    /// Use ContainerWall::NoWall if no turn is needed
+    /// Use [`ContainerWall::DafaultWall`] if no turn is needed
     fn set_boundaries(edge_wall: ContainerWall, x: &mut [f32], size: u32) {
         for i in 1..size - 1 {
             x[idx!(i, 0, size)] = if edge_wall == ContainerWall::East {
@@ -202,9 +201,9 @@ impl Fluid {
             }
         }
 
-        Fluid::set_boundaries(ContainerWall::NoWall, div, size);
-        Fluid::set_boundaries(ContainerWall::NoWall, p, size);
-        Fluid::lin_solve(ContainerWall::NoWall, p, div, 1f32, 4f32, size, frames);
+        Fluid::set_boundaries(ContainerWall::DefaultWall, div, size);
+        Fluid::set_boundaries(ContainerWall::DefaultWall, p, size);
+        Fluid::lin_solve(ContainerWall::DefaultWall, p, div, 1f32, 4f32, size, frames);
 
         for j in 1..size - 1 {
             for i in 1..size - 1 {
@@ -335,7 +334,7 @@ impl Fluid {
         );
 
         Fluid::diffuse(
-            ContainerWall::NoWall,
+            ContainerWall::DefaultWall,
             &mut self.s,
             &self.density,
             &self.fluid_configs.diffusion,
@@ -345,7 +344,7 @@ impl Fluid {
         );
 
         Fluid::advect(
-            ContainerWall::NoWall,
+            ContainerWall::DefaultWall,
             &mut self.density,
             &self.s,
             &self.velocities_x,
@@ -417,10 +416,20 @@ impl Fluid {
         self.init_density();
     }
 
-    /// Given the points of a obstacle, tell the fluid to avoid this obstacle
-    pub fn set_obstacle(&mut self, obstacle: Obstacle) -> result::Result<bool, &str> {
-        if obstacle.are_all_points_valid(self.simulation_configs.size) {
+    /// Given the points of a obstacle, tell the fluid to avoid the object's points by telling
+    /// each point's [`ContainerWall`] side
+    pub fn set_obstacle(&mut self, obstacle: &dyn Obstacle) -> result::Result<bool, &str> {
+        if obstacle.are_all_points_valid(i64::from(self.simulation_configs.size)) {
             return Err("Obstacle's coordinates should be inside the fluid's container");
+        }
+
+        let obstacle_sides = obstacle.get_sides_direction();
+        for (side_key, points) in obstacle_sides {
+            for point in points {
+                self.allowed_cells[
+                    idx!(point.0, point.1, i64::from(self.simulation_configs.size))
+                    ] = side_key;
+            }
         }
 
         Ok(true)
