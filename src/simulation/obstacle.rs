@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use line_drawing::Bresenham;
+use std::collections::HashMap;
 
 use super::fluid::ContainerWall;
 
@@ -33,7 +32,7 @@ impl Rectangle {
             down_right_point: down_right_point,
         };
 
-        if result.are_all_points_valid(i64::from(fluid_container_size)) {
+        if !result.are_all_points_valid(i64::from(fluid_container_size)) {
             panic!("Invalid input for Rectangle");
         }
 
@@ -44,6 +43,8 @@ impl Rectangle {
     pub fn are_all_points_valid(&self, fluid_container_size: i64) -> bool {
         self.up_left_point.0 != self.down_right_point.0
             && self.up_left_point.1 != self.down_right_point.1
+            && self.up_left_point.0 < self.down_right_point.0
+            && self.up_left_point.1 > self.down_right_point.1
             && vec![
                 self.up_left_point.0,
                 self.up_left_point.1,
@@ -146,10 +147,16 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn rectangle_wrong_parameters_on_creation() {
+    fn rectangle_wrong_parameters_on_creation_panics() {
         let up_left_point = (10, 10);
-        // should be down right vertex point
+        // should be DOWN right vertex point, but it is UP right
         let up_right_point = (12, 12);
         Rectangle::new(up_left_point, up_right_point, 128);
+    }
+
+    #[test]
+    #[should_panic]
+    fn rectangle_swapped_parameters_panics() {
+        let rectangle_obstacle = Rectangle::new((10, 8), (8, 10), 128);
     }
 }

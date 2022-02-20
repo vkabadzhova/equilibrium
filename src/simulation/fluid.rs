@@ -69,7 +69,7 @@ pub struct Fluid {
     velocities_y0: Vec<f32>,
     /// Defines which cells are "allowed" for the fluid to run into and which are "obsticles"
     /// by also defining which side of a given obstacle a cell is via the [`ContainerWall`]
-    allowed_cells: Vec<ContainerWall>,
+    pub allowed_cells: Vec<ContainerWall>,
 }
 
 impl Fluid {
@@ -431,7 +431,30 @@ impl Fluid {
 
 #[cfg(test)]
 mod tests {
+    use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
+    use crate::simulation::fluid::{ContainerWall, Fluid};
+    use crate::simulation::obstacle::Rectangle;
 
     #[test]
-    fn are_all_points_valid_works() {}
+    fn set_obstacle_works() {
+        let fluid_configs = FluidConfigs::default();
+        let simulation_configs = SimulationConfigs::default();
+
+        let mut fluid = Fluid::new(fluid_configs, simulation_configs);
+        fluid.set_obstacle(&Rectangle::new(
+            (100, 100),
+            (120, 80),
+            fluid.simulation_configs.size,
+        ));
+
+        let mut count: u64 = 0;
+        for cell in fluid.allowed_cells {
+            if cell != ContainerWall::DefaultWall {
+                count += 1;
+            }
+        }
+        println!("{}", count);
+
+        assert_eq!(count, (100 - 80) * 2 + (120 - 100) * 2);
+    }
 }

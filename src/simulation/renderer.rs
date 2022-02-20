@@ -62,8 +62,8 @@ impl Renderer {
     pub fn new(mut fluid: Fluid) -> Renderer {
         // TODO
         fluid.set_obstacle(&obstacle::Rectangle::new(
-            (30, 80),
-            (20, 100),
+            (100, 100),
+            (120, 80),
             fluid.simulation_configs.size,
         ));
         Renderer {
