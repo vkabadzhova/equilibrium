@@ -1,4 +1,4 @@
-use super::obstacle::{self, Obstacle};
+use super::obstacle::Obstacle;
 use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use geo::algorithm::rotate::RotatePoint;
 use geo::{line_string, point};
@@ -418,21 +418,14 @@ impl Fluid {
 
     /// Given the points of a obstacle, tell the fluid to avoid the object's points by telling
     /// each point's [`ContainerWall`] side
-    pub fn set_obstacle(&mut self, obstacle: &dyn Obstacle) -> result::Result<bool, &str> {
-        if obstacle.are_all_points_valid(i64::from(self.simulation_configs.size)) {
-            return Err("Obstacle's coordinates should be inside the fluid's container");
-        }
-
+    pub fn set_obstacle(&mut self, obstacle: &dyn Obstacle) {
         let obstacle_sides = obstacle.get_sides_direction();
         for (side_key, points) in obstacle_sides {
             for point in points {
-                self.allowed_cells[
-                    idx!(point.0, point.1, i64::from(self.simulation_configs.size))
-                    ] = side_key;
+                self.allowed_cells
+                    [idx!(point.0, point.1, i64::from(self.simulation_configs.size))] = side_key;
             }
         }
-
-        Ok(true)
     }
 }
 

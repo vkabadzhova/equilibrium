@@ -17,6 +17,8 @@ macro_rules! density_img_path {
 
 pub(crate) use density_img_path;
 
+use super::obstacle;
+
 /// Utility for visualization and interaction with the fluid simulation.
 ///
 /// There are two ways to modify the simulation’s parameters while the simulation is
@@ -57,7 +59,13 @@ impl Renderer {
     }
 
     /// Creates new Renderer
-    pub fn new(fluid: Fluid) -> Renderer {
+    pub fn new(mut fluid: Fluid) -> Renderer {
+        // TODO
+        fluid.set_obstacle(&obstacle::Rectangle::new(
+            (30, 80),
+            (20, 100),
+            fluid.simulation_configs.size,
+        ));
         Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
@@ -149,7 +157,6 @@ mod tests {
     use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
     use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
     use crate::simulation::{fluid::Fluid, renderer::Renderer};
-    use eframe::egui::Color32;
 
     #[test]
     fn update_initial_configs_works() {
