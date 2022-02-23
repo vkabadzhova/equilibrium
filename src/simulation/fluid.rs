@@ -1,7 +1,8 @@
-use super::obstacle::Obstacle;
 use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
+use crate::simulation::obstacle::Obstacle;
 use geo::algorithm::rotate::RotatePoint;
 use geo::{line_string, point};
+use log::debug;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
@@ -419,39 +420,117 @@ impl Fluid {
         self.init_density();
     }
 
+    #[cfg(debug_assertions)]
+    fn print_area(&self, point: &line_drawing::Point<i64>) {
+        let vertex_idx = idx!(point.0, point.1, i64::from(self.simulation_configs.size));
+        let symbol = match self.allowed_cells[vertex_idx] {
+            ContainerWall::West => "| W ",
+            ContainerWall::NorthWest => "|NW ",
+            ContainerWall::North => "| N ",
+            ContainerWall::NorthEast => "|NE ",
+            ContainerWall::East => "| E ",
+            ContainerWall::SouthEast => "|SE ",
+            ContainerWall::South => "| S ",
+            ContainerWall::SouthWest => "|SW ",
+            ContainerWall::DefaultWall => "| D ",
+            ContainerWall::NoWall => "| X ",
+        };
+        print!("{}", symbol);
+    }
+
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
     fn fill_obstacle(&mut self, obstacle: &dyn Obstacle) -> Vec<line_drawing::Point<i64>> {
         let result: Vec<line_drawing::Point<i64>> = Vec::new();
+        let obstacle_perimeter = obstacle.get_perimeter();
 
-        let obstacle_perimeter = obstacle.get_sides_direction();
+        // Skip North- and South- East vertexes since no North and South middle points will be left,
+        // i.e. will result in:
+        //  _ _ _ _ _
+        // |E|D|D|D|W|
+        // |E|D|D|D|W|
+        // |E|D|D|D|W|
+        // |E|D|D|D|W|
+        //
+        // where E - East, W - West, D - DefaultWall
+        // instead of:
+        //  _ _ _ _ _
+        // |N|N|N|N|N|
+        // |E|D|D|D|W|
+        // |E|D|D|D|W|
+        // |S|S|S|S|S|
+        //
+        // where E - East, W - West, D - DefaultWall, N - North, S - South
+        //
+        let north_east_vertex = *obstacle_perimeter
+            .get(&ContainerWall::North)
+            .unwrap()
+            .iter()
+            .min_by(|element1, element2| element1.0.cmp(&element2.0))
+            .unwrap();
+
+        let south_east_vertex = *obstacle_perimeter
+            .get(&ContainerWall::South)
+            .unwrap()
+            .iter()
+            .min_by(|element1, element2| element1.0.cmp(&element2.0))
+            .unwrap();
+
         for west_point in obstacle_perimeter.get(&ContainerWall::West).unwrap() {
+            #[cfg(debug_assertions)]
+            {
+                self.print_area(west_point);
+            }
+
+            if *west_point == north_east_vertex || *west_point == south_east_vertex {
+                #[cfg(debug_assertions)]
+                {
+                    println!("");
+                }
+                continue;
+            }
+
             // find the corresponding East neighbour point of the current West point of the
             // obstacle, i.e. the one with the same y, but different x
             // Like so:
             //  _ _ _ _ _
             // | | | | | |
-            // |E|-|-|-|W|
+            // |E|-|-|>|W|
             // | | | | | |
             // |_|_|_|_|_|
             //
+            // where E - East, W - West, arrow (`-->`) - the path and its direction in which the algorithm
+            // will traverse and put [`ContainerWall::DefaultWall`] in between
+            //
             let east_neighbour_point = obstacle_perimeter
-                .get(&ContainerWall::West)
+                .get(&ContainerWall::East)
                 .unwrap()
                 .into_iter()
                 .find(|east_point| east_point.1 == west_point.1 && east_point.0 != west_point.0);
 
             match east_neighbour_point {
                 Some(east_point) => {
-                    for x_coordinate in west_point.0..east_point.0 {
-                        self.allowed_cells[idx!(
+                    for x_coordinate in (west_point.0 + 1)..east_point.0 {
+                        let idx = idx!(
                             x_coordinate,
-                            east_point.0,
+                            east_point.1,
                             i64::from(self.simulation_configs.size)
-                        )] = ContainerWall::DefaultWall;
+                        );
+                        self.allowed_cells[idx] = ContainerWall::DefaultWall;
+
+                        #[cfg(debug_assertions)]
+                        {
+                            self.print_area(&(x_coordinate, east_point.1));
+                        }
+                    }
+                    #[cfg(debug_assertions)]
+                    {
+                        self.print_area(&east_neighbour_point.unwrap());
+                        println!("");
                     }
                 }
+
                 None => {
-                    println!(
+                    debug!(
                         "West point ({}, {}) does not have a corresponding east.",
                         west_point.0.to_string(),
                         west_point.1.to_string()
@@ -466,7 +545,7 @@ impl Fluid {
     /// Given the points of a obstacle, tell the fluid to avoid the object's points by telling
     /// each point's [`ContainerWall`] side
     pub fn set_obstacle(&mut self, obstacle: &dyn Obstacle) {
-        let obstacle_sides = obstacle.get_sides_direction();
+        let obstacle_sides = obstacle.get_perimeter();
         for (side_key, points) in obstacle_sides {
             for point in points {
                 self.allowed_cells
@@ -498,12 +577,70 @@ mod tests {
 
         let mut count: u64 = 0;
         for cell in fluid.allowed_cells {
-            if cell != ContainerWall::NoWall && cell != ContainerWall::DefaultWall{
+            if cell != ContainerWall::NoWall && cell != ContainerWall::DefaultWall {
                 count += 1;
             }
         }
-        println!("{}", count);
 
         assert_eq!(count, (100 - 80) * 2 + (120 - 100) * 2);
+    }
+
+    #[test]
+    fn fill_obstacle_works() {
+        let fluid_configs = FluidConfigs::default();
+        let simulation_configs = SimulationConfigs::default();
+
+        let mut fluid = Fluid::new(fluid_configs, simulation_configs);
+        fluid.set_obstacle(&Rectangle::new(
+            (100, 100),
+            (120, 80),
+            fluid.simulation_configs.size,
+        ));
+
+        let mut count: u64 = 0;
+        for cell in fluid.allowed_cells.iter() {
+            if cell == &ContainerWall::DefaultWall {
+                count += 1;
+            }
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            let mut count_s: u64 = 0;
+            for cell in fluid.allowed_cells.iter() {
+                if cell == &ContainerWall::South {
+                    count_s += 1;
+                }
+            }
+            println!("South count: {}", count_s);
+
+            let mut count_n: u64 = 0;
+            for cell in fluid.allowed_cells.iter() {
+                if cell == &ContainerWall::North {
+                    count_n += 1;
+                }
+            }
+            println!("North count: {}", count_n);
+
+            let mut count_e: u64 = 0;
+            for cell in fluid.allowed_cells.iter() {
+                if cell == &ContainerWall::East {
+                    count_e += 1;
+                }
+            }
+            println!("East count: {}", count_e);
+
+            let mut count_w: u64 = 0;
+            for cell in fluid.allowed_cells.iter() {
+                if cell == &ContainerWall::West {
+                    count_w += 1;
+                }
+            }
+            println!("West count: {}", count_w);
+        }
+
+        let vertical_wall_len = 100 - 80 + 1;
+        let horizontal_wall_len = 120 - 100 + 1;
+        assert_eq!(count, (horizontal_wall_len - 2) * (vertical_wall_len - 2));
     }
 }

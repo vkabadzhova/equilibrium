@@ -6,7 +6,7 @@ use super::fluid::ContainerWall;
 /// Defines every obstacle's behaviour
 pub trait Obstacle {
     /// Returns all countour points with their direction
-    fn get_sides_direction(&self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>;
+    fn get_perimeter(&self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>;
 }
 
 /// Rectangle obstacle which is fit parallely with respect to the
@@ -15,9 +15,9 @@ pub trait Obstacle {
 /// obstacles only
 pub struct Rectangle {
     /// uppest left vertex point. See [`Rectangle`]'s description
-    up_left_point: line_drawing::Point<i64>,
+    pub up_left_point: line_drawing::Point<i64>,
     /// the most down right vertex point. See [`Rectangle`]'s description
-    down_right_point: line_drawing::Point<i64>,
+    pub down_right_point: line_drawing::Point<i64>,
     /// Collection with all the sides of an obstacle. The sides are
     /// defined via compass direction. See [`ContainerWall`].
     sides: HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>,
@@ -115,7 +115,7 @@ impl Rectangle {
 }
 
 impl Obstacle for Rectangle {
-    fn get_sides_direction(&self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
+    fn get_perimeter(&self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
         &self.sides
     }
 }
@@ -144,7 +144,7 @@ mod tests {
             (ContainerWall::East, vec![(10, 10), (10, 9), (10, 8)]),
             (ContainerWall::South, vec![(8, 8), (9, 8), (10, 8)]),
         ]);
-        let result = rectangle_obstacle.get_sides_direction();
+        let result = rectangle_obstacle.get_perimeter();
         assert_eq!(result.len(), 4);
         for (key, value) in expected_result {
             assert!(iters_equal_anyorder(
