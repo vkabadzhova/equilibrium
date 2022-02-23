@@ -6,7 +6,7 @@ use super::fluid::ContainerWall;
 /// Defines every obstacle's behaviour
 pub trait Obstacle {
     /// Returns all countour points with their direction
-    fn get_sides_direction(&self) -> HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>;
+    fn get_sides_direction(&self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>;
 }
 
 /// Rectangle obstacle which is fit parallely with respect to the
@@ -18,6 +18,9 @@ pub struct Rectangle {
     up_left_point: line_drawing::Point<i64>,
     /// the most down right vertex point. See [`Rectangle`]'s description
     down_right_point: line_drawing::Point<i64>,
+    /// Collection with all the sides of an obstacle. The sides are
+    /// defined via compass direction. See [`ContainerWall`].
+    sides: HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>,
 }
 
 impl Rectangle {
@@ -27,14 +30,17 @@ impl Rectangle {
         down_right_point: line_drawing::Point<i64>,
         fluid_container_size: u32,
     ) -> Self {
-        let result = Self {
+        let mut result = Self {
             up_left_point: up_left_point,
             down_right_point: down_right_point,
+            sides: HashMap::new(),
         };
 
         if !result.are_all_points_valid(i64::from(fluid_container_size)) {
             panic!("Invalid input for Rectangle");
         }
+
+        result.calculate_sides();
 
         result
     }
@@ -54,10 +60,8 @@ impl Rectangle {
             .iter()
             .all(|e| *e < fluid_container_size)
     }
-}
 
-impl Obstacle for Rectangle {
-    fn get_sides_direction(&self) -> HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
+    fn calculate_sides(&mut self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
         let mut result: HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> = HashMap::new();
 
         // West wall
@@ -104,7 +108,15 @@ impl Obstacle for Rectangle {
             .collect(),
         );
 
-        result
+        self.sides = result;
+
+        &self.sides
+    }
+}
+
+impl Obstacle for Rectangle {
+    fn get_sides_direction(&self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
+        &self.sides
     }
 }
 
@@ -125,10 +137,7 @@ mod tests {
 
     #[test]
     fn rectangle_get_sides_direction_works() {
-        let rectangle_obstacle = Rectangle {
-            up_left_point: (8, 10),
-            down_right_point: (10, 8),
-        };
+        let rectangle_obstacle = Rectangle::new((8, 10), (10, 8), 128);
         let expected_result = HashMap::from([
             (ContainerWall::West, vec![(8, 8), (8, 9), (8, 10)]),
             (ContainerWall::North, vec![(8, 10), (9, 10), (10, 10)]),
@@ -157,6 +166,6 @@ mod tests {
     #[test]
     #[should_panic]
     fn rectangle_swapped_parameters_panics() {
-        let rectangle_obstacle = Rectangle::new((10, 8), (8, 10), 128);
+        Rectangle::new((10, 8), (8, 10), 128);
     }
 }

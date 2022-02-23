@@ -4,11 +4,10 @@ use geo::algorithm::rotate::RotatePoint;
 use geo::{line_string, point};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
-use std::result;
 
 /// Address the direction in world-directions style
 /// similliar to: mid-point line generation algorithm, etc.
-#[derive(PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(PartialEq, Eq, Copy, Clone, Hash, Debug)]
 pub enum ContainerWall {
     /// the side which is parallel to Ox and has lowest x values
     /// in the coordinate system
@@ -38,8 +37,10 @@ pub enum ContainerWall {
     /// and whose average point's y coordinate is on left of the obstacle's
     /// horizontal mediana is considered NorthEast.
     SouthWest,
-    /// Deafult wall variant. See [`set_boundaries`].
+    /// Deafult wall variant. Used for filling the inner cells of an obstacles
     DefaultWall,
+    /// No wall variant. See [`set_boundaries`].
+    NoWall,
 }
 
 macro_rules! idx {
@@ -84,7 +85,7 @@ impl Fluid {
             velocities_y: vec![0.0; fluid_field_size],
             velocities_x0: vec![0.0; fluid_field_size],
             velocities_y0: vec![0.0; fluid_field_size],
-            allowed_cells: vec![ContainerWall::DefaultWall; fluid_field_size],
+            allowed_cells: vec![ContainerWall::NoWall; fluid_field_size],
             fluid_configs: init_fluid,
             simulation_configs: init_simulation,
         }
@@ -104,8 +105,8 @@ impl Fluid {
 
     /// Process the edge walls, a.k.a. turn the velocities in the opposite way
     /// The function is used not only for velocities, but for density, etc, where
-    /// A turn would have no meaning at all or will cause logical errors.
-    /// Use [`ContainerWall::DafaultWall`] if no turn is needed
+    /// A turn would have no meaning at all or will cause icalogl errors.
+    /// Use [`ContainerWall::NoWall`] if no turn is needed
     fn set_boundaries(edge_wall: ContainerWall, x: &mut [f32], size: u32) {
         for i in 1..size - 1 {
             x[idx!(i, 0, size)] = if edge_wall == ContainerWall::East {
@@ -201,9 +202,9 @@ impl Fluid {
             }
         }
 
-        Fluid::set_boundaries(ContainerWall::DefaultWall, div, size);
-        Fluid::set_boundaries(ContainerWall::DefaultWall, p, size);
-        Fluid::lin_solve(ContainerWall::DefaultWall, p, div, 1f32, 4f32, size, frames);
+        Fluid::set_boundaries(ContainerWall::NoWall, div, size);
+        Fluid::set_boundaries(ContainerWall::NoWall, p, size);
+        Fluid::lin_solve(ContainerWall::NoWall, p, div, 1f32, 4f32, size, frames);
 
         for j in 1..size - 1 {
             for i in 1..size - 1 {
@@ -214,6 +215,7 @@ impl Fluid {
             }
         }
 
+        // TODO: sucspicious: add South & North
         Fluid::set_boundaries(ContainerWall::East, velocities_x, size);
         Fluid::set_boundaries(ContainerWall::North, velocities_y, size);
     }
@@ -334,7 +336,7 @@ impl Fluid {
         );
 
         Fluid::diffuse(
-            ContainerWall::DefaultWall,
+            ContainerWall::NoWall,
             &mut self.s,
             &self.density,
             &self.fluid_configs.diffusion,
@@ -344,7 +346,7 @@ impl Fluid {
         );
 
         Fluid::advect(
-            ContainerWall::DefaultWall,
+            ContainerWall::NoWall,
             &mut self.density,
             &self.s,
             &self.velocities_x,
@@ -383,6 +385,7 @@ impl Fluid {
     /// simulation yet.
     pub fn add_noise(&mut self) {
         let perlin = Perlin::new();
+        // TODO
         //let t_f64 = self.simulation_configs.t as f64;
 
         let angle = perlin.get([
@@ -416,6 +419,50 @@ impl Fluid {
         self.init_density();
     }
 
+    /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
+    fn fill_obstacle(&mut self, obstacle: &dyn Obstacle) -> Vec<line_drawing::Point<i64>> {
+        let result: Vec<line_drawing::Point<i64>> = Vec::new();
+
+        let obstacle_perimeter = obstacle.get_sides_direction();
+        for west_point in obstacle_perimeter.get(&ContainerWall::West).unwrap() {
+            // find the corresponding East neighbour point of the current West point of the
+            // obstacle, i.e. the one with the same y, but different x
+            // Like so:
+            //  _ _ _ _ _
+            // | | | | | |
+            // |E|-|-|-|W|
+            // | | | | | |
+            // |_|_|_|_|_|
+            //
+            let east_neighbour_point = obstacle_perimeter
+                .get(&ContainerWall::West)
+                .unwrap()
+                .into_iter()
+                .find(|east_point| east_point.1 == west_point.1 && east_point.0 != west_point.0);
+
+            match east_neighbour_point {
+                Some(east_point) => {
+                    for x_coordinate in west_point.0..east_point.0 {
+                        self.allowed_cells[idx!(
+                            x_coordinate,
+                            east_point.0,
+                            i64::from(self.simulation_configs.size)
+                        )] = ContainerWall::DefaultWall;
+                    }
+                }
+                None => {
+                    println!(
+                        "West point ({}, {}) does not have a corresponding east.",
+                        west_point.0.to_string(),
+                        west_point.1.to_string()
+                    )
+                }
+            }
+        }
+
+        result
+    }
+
     /// Given the points of a obstacle, tell the fluid to avoid the object's points by telling
     /// each point's [`ContainerWall`] side
     pub fn set_obstacle(&mut self, obstacle: &dyn Obstacle) {
@@ -423,9 +470,11 @@ impl Fluid {
         for (side_key, points) in obstacle_sides {
             for point in points {
                 self.allowed_cells
-                    [idx!(point.0, point.1, i64::from(self.simulation_configs.size))] = side_key;
+                    [idx!(point.0, point.1, i64::from(self.simulation_configs.size))] = *side_key;
             }
         }
+
+        self.fill_obstacle(obstacle);
     }
 }
 
@@ -449,7 +498,7 @@ mod tests {
 
         let mut count: u64 = 0;
         for cell in fluid.allowed_cells {
-            if cell != ContainerWall::DefaultWall {
+            if cell != ContainerWall::NoWall && cell != ContainerWall::DefaultWall{
                 count += 1;
             }
         }

@@ -17,6 +17,7 @@ macro_rules! density_img_path {
 
 pub(crate) use density_img_path;
 
+use super::fluid::ContainerWall;
 use super::obstacle;
 
 /// Utility for visualization and interaction with the fluid simulation.
@@ -60,7 +61,7 @@ impl Renderer {
 
     /// Creates new Renderer
     pub fn new(mut fluid: Fluid) -> Renderer {
-        // TODO
+        // TODO: remove obstacle?
         fluid.set_obstacle(&obstacle::Rectangle::new(
             (100, 100),
             (120, 80),
@@ -96,7 +97,9 @@ impl Renderer {
 
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.fluid.density[idx!(x, y, self.fluid.simulation_configs.size)];
-            if density != 0.0 {
+            let cell_wall_type =
+                self.fluid.allowed_cells[idx!(x, y, self.fluid.simulation_configs.size)];
+            if density != 0.0 && cell_wall_type == ContainerWall::NoWall {
                 *pixel = image::Rgba([
                     (density * fluid_rgba[0] as f32) as u8,
                     fluid_rgba[1],
@@ -153,7 +156,6 @@ impl Renderer {
 #[cfg(test)]
 mod tests {
     use crate::app::widgets::fluid_configs_menu::FluidUiSettings;
-    use crate::app::widgets::simulation_configs_menu::SimulationUiSettings;
     use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
     use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
     use crate::simulation::{fluid::Fluid, renderer::Renderer};
@@ -171,7 +173,6 @@ mod tests {
         assert_ne!(renderer.fluid.fluid_configs.diffusion, 0.4212312);
 
         //---------- Init SettingMenu -----------
-        let simulation_ui_setting = SimulationUiSettings::default();
         let mut fluid_ui_setting = FluidUiSettings::default();
 
         fluid_ui_setting.fluid_configs.diffusion = 0.4212312;
