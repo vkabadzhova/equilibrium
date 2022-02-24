@@ -44,20 +44,22 @@ pub enum ContainerWall {
     NoWall,
 }
 
+/// The enum is used is created since some functions such as the [`Fluid::set_boundary()`] only
+/// need a concise way to express if the line is parallel to Ox or Oy.
+#[derive(PartialEq, Eq, Copy, Clone)]
+enum Axis {
+    /// The Ox axis and semantically is used as all parallel to it
+    X,
+    /// The Oy axis and semantically is used as all parallel to it
+    Y,
+    /// No axis, the function is operating on a non vector-based concept
+    ZeroAxis,
+}
+
 macro_rules! idx {
     ($x:expr, $y:expr, $size: expr) => {
         ($x.clamp(0, $size - 1) + ($y.clamp(0, $size - 1) * $size)) as usize
     };
-}
-
-/// The [`Fluid::lin_solver()`] and other functions of the [`Fluid`] struct solve an equation
-/// only for a single dimesion. This is why a differentiation between the two is in need of.
-/// Developed for the [`Fluid::set_boundaries()`], etc.
-enum Dimension {
-    /// X dimension
-    X,
-    /// Y dimension
-    Y,
 }
 
 /// The struct that is responsible for simulating the fluid's behavour.
@@ -126,8 +128,6 @@ impl Fluid {
         self.velocities_y[idx] += amount_y;
     }
 
-    // TODO: express side as Ox or Oy
-
     /// Reflects a cell's velocity when a wall is hit. It works as follows:
     ///
     /// Since the velocity vector (its direction and magnitute) are given by
@@ -185,14 +185,14 @@ impl Fluid {
     ///  direction of (1)
     ///  (ignore downward arrow's tip :))
     ///
-    fn set_boundaries(edge_wall: ContainerWall, x: &mut [f32], size: u32) {
+    fn set_boundaries(axis: Axis, x: &mut [f32], size: u32) {
         for i in 1..size - 1 {
-            x[idx!(i, 0, size)] = if edge_wall == ContainerWall::East {
+            x[idx!(i, 0, size)] = if axis == Axis::Y {
                 -x[idx!(i, 1, size)]
             } else {
                 x[idx!(i, 1, size)]
             };
-            x[idx!(i, size - 1, size)] = if edge_wall == ContainerWall::East {
+            x[idx!(i, size - 1, size)] = if axis == Axis::Y {
                 -x[idx!(i, size - 2, size)]
             } else {
                 x[idx!(i, size - 2, size)]
@@ -200,12 +200,12 @@ impl Fluid {
         }
 
         for j in 1..size - 1 {
-            x[idx!(0, j, size)] = if edge_wall == ContainerWall::North {
+            x[idx!(0, j, size)] = if axis == Axis::X {
                 -x[idx!(1, j, size)]
             } else {
                 x[idx!(1, j, size)]
             };
-            x[idx!(size - 1, j, size)] = if edge_wall == ContainerWall::North {
+            x[idx!(size - 1, j, size)] = if axis == Axis::X {
                 -x[idx!(size - 2, j, size)]
             } else {
                 x[idx!(size - 2, j, size)]
@@ -222,7 +222,7 @@ impl Fluid {
     }
 
     fn diffuse(
-        edge_wall: ContainerWall,
+        axis: Axis,
         x: &mut [f32],
         x0: &[f32],
         diffusion: &f32,
@@ -232,18 +232,10 @@ impl Fluid {
     ) {
         let size_float = (size - 2) as f32;
         let a = delta_t * diffusion * size_float * size_float;
-        Fluid::lin_solve(edge_wall, x, x0, a, 1.0 + 4.0 * a, size, frames);
+        Fluid::lin_solve(axis, x, x0, a, 1.0 + 4.0 * a, size, frames);
     }
 
-    fn lin_solve(
-        edge_wall: ContainerWall,
-        x: &mut [f32],
-        x0: &[f32],
-        a: f32,
-        c: f32,
-        size: u32,
-        frames: i64,
-    ) {
+    fn lin_solve(axis: Axis, x: &mut [f32], x0: &[f32], a: f32, c: f32, size: u32, frames: i64) {
         let c_recip = 1.0 / c;
         for _k in 0..frames {
             for j in 1..size - 1 {
@@ -256,7 +248,7 @@ impl Fluid {
                         * c_recip;
                 }
             }
-            Fluid::set_boundaries(edge_wall, x, size);
+            Fluid::set_boundaries(axis, x, size);
         }
     }
 
@@ -280,9 +272,9 @@ impl Fluid {
             }
         }
 
-        Fluid::set_boundaries(ContainerWall::NoWall, div, size);
-        Fluid::set_boundaries(ContainerWall::NoWall, p, size);
-        Fluid::lin_solve(ContainerWall::NoWall, p, div, 1f32, 4f32, size, frames);
+        Fluid::set_boundaries(Axis::ZeroAxis, div, size);
+        Fluid::set_boundaries(Axis::ZeroAxis, p, size);
+        Fluid::lin_solve(Axis::ZeroAxis, p, div, 1.0, 4.0, size, frames);
 
         for j in 1..size - 1 {
             for i in 1..size - 1 {
@@ -293,15 +285,12 @@ impl Fluid {
             }
         }
 
-        // TODO: sucspicious: add South & North
-        Fluid::set_boundaries(ContainerWall::West, velocities_x, size);
-        Fluid::set_boundaries(ContainerWall::South, velocities_x, size);
-        Fluid::set_boundaries(ContainerWall::East, velocities_x, size);
-        Fluid::set_boundaries(ContainerWall::North, velocities_y, size);
+        Fluid::set_boundaries(Axis::X, velocities_x, size);
+        Fluid::set_boundaries(Axis::Y, velocities_y, size);
     }
 
     fn advect(
-        edge_wall: ContainerWall,
+        axis: Axis,
         densities: &mut [f32],
         densities0: &[f32],
         velocities_x: &[f32],
@@ -352,7 +341,7 @@ impl Fluid {
                         + t1 * densities0[idx!(i1_int, j1_int, size)]);
             }
         }
-        Fluid::set_boundaries(edge_wall, densities, size);
+        Fluid::set_boundaries(axis, densities, size);
     }
 
     /// Simulates the next step of the fluid's movement.
@@ -360,7 +349,7 @@ impl Fluid {
     /// and constraining it to not get out of the wall's boundaries
     pub fn step(&mut self) {
         Fluid::diffuse(
-            ContainerWall::East,
+            Axis::X,
             &mut self.velocities_x0,
             &self.velocities_x,
             &self.fluid_configs.viscousity,
@@ -369,7 +358,7 @@ impl Fluid {
             self.simulation_configs.frames,
         );
         Fluid::diffuse(
-            ContainerWall::North,
+            Axis::Y,
             &mut self.velocities_y0,
             &self.velocities_y,
             &self.fluid_configs.viscousity,
@@ -388,7 +377,7 @@ impl Fluid {
         );
 
         Fluid::advect(
-            ContainerWall::East,
+            Axis::X,
             &mut self.velocities_x,
             &self.velocities_x0,
             &self.velocities_x0,
@@ -397,7 +386,7 @@ impl Fluid {
             &self.simulation_configs.delta_t,
         );
         Fluid::advect(
-            ContainerWall::North,
+            Axis::Y,
             &mut self.velocities_y,
             &self.velocities_y0,
             &self.velocities_x0,
@@ -416,7 +405,7 @@ impl Fluid {
         );
 
         Fluid::diffuse(
-            ContainerWall::NoWall,
+            Axis::ZeroAxis,
             &mut self.s,
             &self.density,
             &self.fluid_configs.diffusion,
@@ -426,7 +415,7 @@ impl Fluid {
         );
 
         Fluid::advect(
-            ContainerWall::NoWall,
+            Axis::ZeroAxis,
             &mut self.density,
             &self.s,
             &self.velocities_x,
