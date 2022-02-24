@@ -185,7 +185,61 @@ impl Fluid {
     ///  direction of (1)
     ///  (ignore downward arrow's tip :))
     ///
-    fn set_boundaries(axis: Axis, x: &mut [f32], size: u32) {
+    fn set_boundaries(axis: Axis, x: &mut [f32], size: u32, cells_type: &Vec<ContainerWall>) {
+        for j in 0..size - 1 {
+            for i in 1..size - 1 {
+                let up_point_coordinates = (i, (j-1).clamp(0, size-1));
+                let down_point_coordinates = (i, (j+1).clamp(0, size-1));
+                let left_point_coordinates = ((i-1).clamp(0, size-1), j);
+                let right_point_coordinates = ((i+1).clamp(0, size-1), j);
+
+                if axis == Axis::Y {
+                    if cells_type[idx!(up_point_coordinates.0, up_point_coordinates.1, size)] == ContainerWall::DefaultWall {
+                        // TODO
+                    }
+                }
+                x[idx!(i, j, size)] = if axis == Axis::Y {
+                    -x[idx!(i, j, size)]
+                } else {
+                    x[idx!(i, j, size)]
+                };
+            }
+        }
+
+        // TODO: j starts from 1 in paper
+        for j in 0..size - 1 {
+            for i in 1..size - 1 {
+                x[idx!(i, j, size)] = if axis == Axis::Y {
+                    -x[idx!(i, j, size)]
+                } else {
+                    x[idx!(i, j, size)]
+                };
+            }
+        }
+
+        for j in 1..size - 1 {
+            x[idx!(0, j, size)] = if axis == Axis::X {
+                -x[idx!(1, j, size)]
+            } else {
+                x[idx!(1, j, size)]
+            };
+            x[idx!(size - 1, j, size)] = if axis == Axis::X {
+                -x[idx!(size - 2, j, size)]
+            } else {
+                x[idx!(size - 2, j, size)]
+            };
+        }
+
+        /// Set corners
+        x[idx!(0, 0, size)] = 0.5 * (x[idx!(1, 0, size)] + x[idx!(0, 1, size)]);
+        x[idx!(0, size - 1, size)] =
+            0.5 * (x[idx!(1, size - 1, size)] + x[idx!(0, size - 2, size)]);
+        x[idx!(size - 1, 0, size)] =
+            0.5 * (x[idx!(size - 2, 0, size)] + x[idx!(size - 1, 1, size)]);
+        x[idx!(size - 1, size - 1, size)] =
+            0.5 * (x[idx!(size - 2, size - 1, size)] + x[idx!(size - 1, size - 2, size)]);
+
+        /*
         for i in 1..size - 1 {
             x[idx!(i, 0, size)] = if axis == Axis::Y {
                 -x[idx!(i, 1, size)]
@@ -219,6 +273,7 @@ impl Fluid {
             0.5 * (x[idx!(size - 2, 0, size)] + x[idx!(size - 1, 1, size)]);
         x[idx!(size - 1, size - 1, size)] =
             0.5 * (x[idx!(size - 2, size - 1, size)] + x[idx!(size - 1, size - 2, size)]);
+        */
     }
 
     fn diffuse(
@@ -229,13 +284,14 @@ impl Fluid {
         size: u32,
         delta_t: &f32,
         frames: i64,
+        cells_type: &Vec<ContainerWall>
     ) {
         let size_float = (size - 2) as f32;
         let a = delta_t * diffusion * size_float * size_float;
-        Fluid::lin_solve(axis, x, x0, a, 1.0 + 4.0 * a, size, frames);
+        Fluid::lin_solve(axis, x, x0, a, 1.0 + 4.0 * a, size, frames, cells_type);
     }
 
-    fn lin_solve(axis: Axis, x: &mut [f32], x0: &[f32], a: f32, c: f32, size: u32, frames: i64) {
+    fn lin_solve(axis: Axis, x: &mut [f32], x0: &[f32], a: f32, c: f32, size: u32, frames: i64, cells_type: &Vec<ContainerWall>) {
         let c_recip = 1.0 / c;
         for _k in 0..frames {
             for j in 1..size - 1 {
@@ -248,7 +304,7 @@ impl Fluid {
                         * c_recip;
                 }
             }
-            Fluid::set_boundaries(axis, x, size);
+            Fluid::set_boundaries(axis, x, cells_type, size);
         }
     }
 
@@ -259,6 +315,7 @@ impl Fluid {
         div: &mut [f32],
         size: u32,
         frames: i64,
+        cells_type: &Vec<ContainerWall>, 
     ) {
         for j in 1..size - 1 {
             for i in 1..size - 1 {
@@ -272,9 +329,9 @@ impl Fluid {
             }
         }
 
-        Fluid::set_boundaries(Axis::ZeroAxis, div, size);
-        Fluid::set_boundaries(Axis::ZeroAxis, p, size);
-        Fluid::lin_solve(Axis::ZeroAxis, p, div, 1.0, 4.0, size, frames);
+        Fluid::set_boundaries(Axis::ZeroAxis, div, size, cells_type);
+        Fluid::set_boundaries(Axis::ZeroAxis, p, size, cells_type);
+        Fluid::lin_solve(Axis::ZeroAxis, p, div, 1.0, 4.0, size, frames, cells_type);
 
         for j in 1..size - 1 {
             for i in 1..size - 1 {
@@ -285,8 +342,8 @@ impl Fluid {
             }
         }
 
-        Fluid::set_boundaries(Axis::X, velocities_x, size);
-        Fluid::set_boundaries(Axis::Y, velocities_y, size);
+        Fluid::set_boundaries(Axis::X, velocities_x, size, cells_type);
+        Fluid::set_boundaries(Axis::Y, velocities_y, size, cells_type);
     }
 
     fn advect(
@@ -297,6 +354,7 @@ impl Fluid {
         velocities_y: &[f32],
         size: u32,
         delta_t: &f32,
+        cells_type: &Vec<ContainerWall>, 
     ) {
         let (mut i0, mut i1, mut j0, mut j1): (f32, f32, f32, f32);
 
@@ -341,7 +399,7 @@ impl Fluid {
                         + t1 * densities0[idx!(i1_int, j1_int, size)]);
             }
         }
-        Fluid::set_boundaries(axis, densities, size);
+        Fluid::set_boundaries(axis, densities, size, cells_type);
     }
 
     /// Simulates the next step of the fluid's movement.
@@ -356,6 +414,7 @@ impl Fluid {
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
             self.simulation_configs.frames,
+            &self.allowed_cells
         );
         Fluid::diffuse(
             Axis::Y,
@@ -365,6 +424,7 @@ impl Fluid {
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
             self.simulation_configs.frames,
+            &self.allowed_cells
         );
 
         Fluid::project(
@@ -374,6 +434,7 @@ impl Fluid {
             &mut self.velocities_y,
             self.simulation_configs.size,
             self.simulation_configs.frames,
+            &self.allowed_cells
         );
 
         Fluid::advect(
@@ -384,7 +445,9 @@ impl Fluid {
             &self.velocities_y0,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
+            &self.allowed_cells
         );
+
         Fluid::advect(
             Axis::Y,
             &mut self.velocities_y,
@@ -393,6 +456,7 @@ impl Fluid {
             &self.velocities_y0,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
+            &self.allowed_cells
         );
 
         Fluid::project(
@@ -402,6 +466,7 @@ impl Fluid {
             &mut self.velocities_y0,
             self.simulation_configs.size,
             self.simulation_configs.frames,
+            &self.allowed_cells
         );
 
         Fluid::diffuse(
@@ -412,6 +477,7 @@ impl Fluid {
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
             self.simulation_configs.frames,
+            &self.allowed_cells
         );
 
         Fluid::advect(
@@ -422,6 +488,7 @@ impl Fluid {
             &self.velocities_y,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
+            &self.allowed_cells
         );
 
         self.s = self.density.clone();
