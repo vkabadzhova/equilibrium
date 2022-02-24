@@ -50,7 +50,29 @@ macro_rules! idx {
     };
 }
 
-/// The struct that is responsible for simulating the fluid's behavour
+/// The [`Fluid::lin_solver()`] and other functions of the [`Fluid`] struct solve an equation
+/// only for a single dimesion. This is why a differentiation between the two is in need of.
+/// Developed for the [`Fluid::set_boundaries()`], etc.
+enum Dimension {
+    /// X dimension
+    X,
+    /// Y dimension
+    Y,
+}
+
+/// The struct that is responsible for simulating the fluid's behavour.
+///
+/// *Note:*
+/// The velocity vector for each cell (i.e. its direction and magnitute) is
+/// given by the sum of the vector in the velocities_x and velocities_y coefficients
+/// that form a part of normalized vectors, too.
+///
+///              ^
+/// velocities_y |^
+///              | \  sum of the two vectors forms a new vector: the direction of the
+///              |  \ fluid in that exact cell
+///              ---->
+///            velocities_x
 pub struct Fluid {
     /// general configurations for the simulated fluid
     pub fluid_configs: FluidConfigs,
@@ -104,10 +126,65 @@ impl Fluid {
         self.velocities_y[idx] += amount_y;
     }
 
-    /// Process the edge walls, a.k.a. turn the velocities in the opposite way
-    /// The function is used not only for velocities, but for density, etc, where
-    /// A turn would have no meaning at all or will cause icalogl errors.
-    /// Use [`ContainerWall::NoWall`] if no turn is needed
+    // TODO: express side as Ox or Oy
+
+    /// Reflects a cell's velocity when a wall is hit. It works as follows:
+    ///
+    /// Since the velocity vector (its direction and magnitute) are given by
+    /// the sum of the velocities_x and velocities_y coefficient, the hit to a wall
+    /// is simulated by mirroring those vectors. This happens just by changing the sign of
+    /// the given vector.
+    ///
+    /// *Note 1.:* depending on which edge the cell is next to, only the x velocity component OR
+    /// the y velocity is changed. Also note that this only works if the wall is parallel to
+    /// one of the axis of the coordinate system.
+    ///
+    /// ============== Working principle =================
+    /// A cell's velocity vector is a combination of the `velocities_x` and `velocities_y`
+    ///
+    ///              ^
+    /// velocities_y |^
+    ///              | \  sum of the two vectors forms a new vector: the direction of the
+    ///              |  \ fluid in that exact cell
+    ///              ---->
+    ///            velocities_x
+    ///
+    /// Mirroring of the vector with regards to Oy is made by replacing the x component of the
+    /// vector with its opposite number (the same value, but with the opposite sign)
+    ///
+    ///                      ^
+    /// new vector which    ^|^
+    /// mirrors the        / | \  sum of the two vectors forms a new vector: the direction of the
+    /// original          /  |  \ fluid in that exact cell
+    ///                 <=====---->
+    ///                 velocities_x
+    ///
+    /// *Note 2.:* The above example is appropriate for the left wall:
+    ///  __________
+    ///  ||        |
+    ///  ||  ^     |
+    ///  || /      |
+    ///  ||/       |
+    ///  ||^       |
+    ///  || \      |
+    ///  ||  \     |
+    ///  -----------
+    ///
+    /// *Note 3.:* The corners do this mirroring for both their x and y component which results in
+    /// a vector symmetrical by both Ox and Oy.
+    ///
+    ///                      ^
+    ///   mirrored vector   ^|^   (1)
+    ///   by Oy (2)        / | \  sum of the two vectors forms a new vector: the direction of the
+    ///                   /  |  \ fluid in that exact cell
+    ///                 <=====---->
+    ///                  \   |
+    ///  the resulting    \  |
+    ///  arrow which is    ^ |
+    ///  pointing the oppisite
+    ///  direction of (1)
+    ///  (ignore downward arrow's tip :))
+    ///
     fn set_boundaries(edge_wall: ContainerWall, x: &mut [f32], size: u32) {
         for i in 1..size - 1 {
             x[idx!(i, 0, size)] = if edge_wall == ContainerWall::East {
@@ -167,7 +244,7 @@ impl Fluid {
         size: u32,
         frames: i64,
     ) {
-        let c_recip = 1f32 / c;
+        let c_recip = 1.0 / c;
         for _k in 0..frames {
             for j in 1..size - 1 {
                 for i in 1..size - 1 {
@@ -217,6 +294,8 @@ impl Fluid {
         }
 
         // TODO: sucspicious: add South & North
+        Fluid::set_boundaries(ContainerWall::West, velocities_x, size);
+        Fluid::set_boundaries(ContainerWall::South, velocities_x, size);
         Fluid::set_boundaries(ContainerWall::East, velocities_x, size);
         Fluid::set_boundaries(ContainerWall::North, velocities_y, size);
     }
@@ -386,8 +465,6 @@ impl Fluid {
     /// simulation yet.
     pub fn add_noise(&mut self) {
         let perlin = Perlin::new();
-        // TODO
-        //let t_f64 = self.simulation_configs.t as f64;
 
         let angle = perlin.get([
             self.simulation_configs.delta_t as f64,
@@ -403,8 +480,6 @@ impl Fluid {
         let ls = line_string![(x: (self.simulation_configs.size/2) as f32, y: (self.simulation_configs.size/2) as f32), (x: rand_x as f32, y: rand_y as f32)];
 
         let rotated = ls.rotate_around_point(angle as f32, center_point);
-
-        //self.simulation_configs.t += 0.01;
 
         self.add_velocity(
             center_point.x().trunc() as u32,
@@ -443,54 +518,10 @@ impl Fluid {
         let result: Vec<line_drawing::Point<i64>> = Vec::new();
         let obstacle_perimeter = obstacle.get_perimeter();
 
-        // Skip North- and South- East vertexes since no North and South middle points will be left,
-        // i.e. will result in:
-        //  _ _ _ _ _
-        // |E|D|D|D|W|
-        // |E|D|D|D|W|
-        // |E|D|D|D|W|
-        // |E|D|D|D|W|
-        //
-        // where E - East, W - West, D - DefaultWall
-        // instead of:
-        //  _ _ _ _ _
-        // |N|N|N|N|N|
-        // |E|D|D|D|W|
-        // |E|D|D|D|W|
-        // |S|S|S|S|S|
-        //
-        // where E - East, W - West, D - DefaultWall, N - North, S - South
-        //
-        let north_east_vertex = *obstacle_perimeter
-            .get(&ContainerWall::North)
-            .unwrap()
-            .iter()
-            .min_by(|element1, element2| element1.0.cmp(&element2.0))
-            .unwrap();
-
-        let south_east_vertex = *obstacle_perimeter
-            .get(&ContainerWall::South)
-            .unwrap()
-            .iter()
-            .min_by(|element1, element2| element1.0.cmp(&element2.0))
-            .unwrap();
-
         for west_point in obstacle_perimeter.get(&ContainerWall::West).unwrap() {
-            #[cfg(debug_assertions)]
-            {
-                self.print_area(west_point);
-            }
-
-            if *west_point == north_east_vertex || *west_point == south_east_vertex {
-                #[cfg(debug_assertions)]
-                {
-                    println!("");
-                }
-                continue;
-            }
-
             // find the corresponding East neighbour point of the current West point of the
-            // obstacle, i.e. the one with the same y, but different x
+            // obstacle, i.e. the one with the same y, but different x and replace all
+            // ContainerWall types with [`ContainerWall::DefaultWall`]
             // Like so:
             //  _ _ _ _ _
             // | | | | | |
@@ -509,7 +540,7 @@ impl Fluid {
 
             match east_neighbour_point {
                 Some(east_point) => {
-                    for x_coordinate in (west_point.0 + 1)..east_point.0 {
+                    for x_coordinate in west_point.0..=east_point.0 {
                         let idx = idx!(
                             x_coordinate,
                             east_point.1,
