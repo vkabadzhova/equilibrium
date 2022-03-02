@@ -4,6 +4,7 @@ use crate::simulation::renderer::density_img_path;
 use crate::simulation::renderer::Renderer;
 use crossbeam_utils::thread;
 use eframe::{egui, epi};
+use image::imageops::FilterType::Triangle;
 use image::GenericImageView;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -47,7 +48,12 @@ impl App {
     }
 
     fn show_image(image_path: &str, frame: &epi::Frame, ui: &mut egui::Ui) {
-        let image = image::open(image_path).unwrap();
+        // TODO: make image size customizeable by using a widget
+        let image = image::open(image_path).unwrap().resize(
+            ui.available_width() as u32 / 2,
+            ui.available_height() as u32 / 2,
+            Triangle,
+        );
         let size = image.dimensions();
 
         let image = epi::Image::from_rgba_unmultiplied(
@@ -204,7 +210,6 @@ impl epi::App for App {
                 "https://github.com/vkabadzhova/equilibrium",
                 "Source code."
             ));
-            egui::warn_if_debug_build(ui);
         });
 
         egui::SidePanel::right("egui_demo_panel")

@@ -90,8 +90,8 @@ impl SimulationUiSettings {
 
         ui.label("Simulation window size");
         ui.add(egui::DragValue::new(&mut simulation_configs.size).speed(1.0));
-        if simulation_configs.size < 128 {
-            simulation_configs.size = 128;
+        if simulation_configs.size < 1 {
+            simulation_configs.size = 1;
         }
         ui.end_row();
     }
