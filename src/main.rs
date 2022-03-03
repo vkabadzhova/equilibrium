@@ -1,6 +1,7 @@
 use equilibrium::app::app::App;
 use equilibrium::simulation::configs::{FluidConfigs, SimulationConfigs};
 use equilibrium::simulation::fluid::Fluid;
+use equilibrium::simulation::obstacle;
 use equilibrium::simulation::renderer::Renderer;
 use simplelog::{
     ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger,
@@ -26,7 +27,14 @@ fn main() {
     let fluid_configs = FluidConfigs::default();
     let simulation_configs = SimulationConfigs::default();
 
-    let fluid = Fluid::new(fluid_configs, simulation_configs);
+    let mut fluid = Fluid::new(fluid_configs, simulation_configs);
+
+    // TODO: remove obstacle?
+    fluid.set_obstacle(&obstacle::Rectangle::new(
+        (50, 100),
+        (120, 30),
+        fluid.simulation_configs.size,
+    ));
     let renderer = Renderer::new(fluid);
 
     let app = App::new(renderer);

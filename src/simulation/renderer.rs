@@ -61,12 +61,6 @@ impl Renderer {
 
     /// Creates new Renderer
     pub fn new(mut fluid: Fluid) -> Renderer {
-        // TODO: remove obstacle?
-        fluid.set_obstacle(&obstacle::Rectangle::new(
-            (50, 100),
-            (120, 30),
-            fluid.simulation_configs.size,
-        ));
         Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
@@ -97,12 +91,12 @@ impl Renderer {
 
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.fluid.density[idx!(x, y, self.fluid.simulation_configs.size)];
-            let cell_wall_type =
-                self.fluid.allowed_cells[idx!(x, y, self.fluid.simulation_configs.size)];
-            if cell_wall_type == ContainerWall::DefaultWall {
-                *pixel = image::Rgba([255, 255, 255, 1]);
+            let cell_type =
+                self.fluid.cells_type[idx!(x, y, self.fluid.simulation_configs.size)];
+            if cell_type == ContainerWall::DefaultWall {
+                *pixel = image::Rgba([255, 0, 0, 1]);
             }
-            if density != 0.0 && cell_wall_type == ContainerWall::NoWall {
+            else if density != 0.0 && cell_type == ContainerWall::NoWall {
                 *pixel = image::Rgba([
                     (density * fluid_rgba[0] as f32) as u8,
                     fluid_rgba[1],

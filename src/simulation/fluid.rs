@@ -47,13 +47,13 @@ pub enum ContainerWall {
 /// The enum is used is created since some functions such as the [`Fluid::set_boundary()`] only
 /// need a concise way to express if the line is parallel to Ox or Oy.
 #[derive(PartialEq, Eq, Copy, Clone)]
-enum Axis {
+enum Orientation {
     /// The Ox axis and semantically is used as all parallel to it
-    X,
+    AdjustRow,
     /// The Oy axis and semantically is used as all parallel to it
-    Y,
+    AdjustColumn,
     /// No axis, the function is operating on a non vector-based concept
-    ZeroAxis,
+    AdjustPassive,
 }
 
 macro_rules! idx {
@@ -95,7 +95,7 @@ pub struct Fluid {
     velocities_y0: Vec<f32>,
     /// Defines which cells are "allowed" for the fluid to run into and which are "obsticles"
     /// by also defining which side of a given obstacle a cell is via the [`ContainerWall`]
-    pub allowed_cells: Vec<ContainerWall>,
+    pub cells_type: Vec<ContainerWall>,
 }
 
 impl Fluid {
@@ -110,7 +110,7 @@ impl Fluid {
             velocities_y: vec![0.0; fluid_field_size],
             velocities_x0: vec![0.0; fluid_field_size],
             velocities_y0: vec![0.0; fluid_field_size],
-            allowed_cells: vec![ContainerWall::NoWall; fluid_field_size],
+            cells_type: vec![ContainerWall::NoWall; fluid_field_size],
             fluid_configs: init_fluid,
             simulation_configs: init_simulation,
         }
@@ -185,68 +185,88 @@ impl Fluid {
     ///  direction of (1)
     ///  (ignore downward arrow's tip :))
     ///
-    fn set_boundaries(axis: Axis, x: &mut [f32], size: u32, cells_type: &Vec<ContainerWall>) {
+    fn set_boundaries(
+        orientation: Orientation,
+        x: &mut [f32],
+        size: u32,
+        cells_type: &Vec<ContainerWall>,
+    ) {
         let size = i64::from(size);
-        for j in 0..size - 1 {
-            for i in 1..size - 1 {
-                let up_point_coordinates = (i, (j - 1).clamp(0, size - 1));
-                let down_point_coordinates = (i, (j + 1).clamp(0, size - 1));
-                let left_point_coordinates = ((i - 1).clamp(0, size - 1), j);
-                let right_point_coordinates = ((i + 1).clamp(0, size - 1), j);
+        // for j in 0..size - 1 {
+        //     for i in 1..size - 1 {
+        //         let up_point_coordinates = (i, (j - 1).clamp(0, size - 1));
+        //         let down_point_coordinates = (i, (j + 1).clamp(0, size - 1));
+        //         let left_point_coordinates = ((i - 1).clamp(0, size - 1), j);
+        //         let right_point_coordinates = ((i + 1).clamp(0, size - 1), j);
 
-                match axis {
-                    Axis::X => {
-                        if cells_type
-                            [idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
-                            == ContainerWall::DefaultWall
-                        {
-                            x[idx!(i, j, size)] =
-                                -x[idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
-                        }
-                        if cells_type
-                            [idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
-                            == ContainerWall::DefaultWall
-                        {
-                            x[idx!(i, j, size)] =
-                                -x[idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
-                        }
-                    }
-                    Axis::Y => {
-                        if cells_type
-                            [idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
-                            == ContainerWall::DefaultWall
-                        {
-                            x[idx!(i, j, size)] =
-                                -x[idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
-                        }
-                        if cells_type[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
-                            == ContainerWall::DefaultWall
-                        {
-                            x[idx!(i, j, size)] =
-                                -x[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
+        //         match orientation {
+        //             Orientation::AdjustRow => {
+        //                 if cells_type
+        //                     [idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
+        //                     == ContainerWall::DefaultWall
+        //                 {
+        //                     x[idx!(i, j, size)] =
+        //                         -x[idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
+        //                 }
+        //                 if cells_type
+        //                     [idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
+        //                     == ContainerWall::DefaultWall
+        //                 {
+        //                     x[idx!(i, j, size)] =
+        //                         -x[idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
+        //                 }
+        //             }
+        //             Orientation::AdjustColumn => {
+        //                 if cells_type
+        //                     [idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
+        //                     == ContainerWall::DefaultWall
+        //                 {
+        //                     x[idx!(i, j, size)] =
+        //                         -x[idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
+        //                 }
+        //                 if cells_type[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
+        //                     == ContainerWall::DefaultWall
+        //                 {
+        //                     x[idx!(i, j, size)] =
+        //                         -x[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
+        //                 }
+        //             }
+        //             _ => {}
+        //         }
+        //     }
+        // }
 
-        // Set corners
-        x[idx!(0, 0, size)] = 0.5 * (x[idx!(1, 0, size)] + x[idx!(0, 1, size)]);
-        x[idx!(0, size - 1, size)] =
-            0.5 * (x[idx!(1, size - 1, size)] + x[idx!(0, size - 2, size)]);
-        x[idx!(size - 1, 0, size)] =
-            0.5 * (x[idx!(size - 2, 0, size)] + x[idx!(size - 1, 1, size)]);
-        x[idx!(size - 1, size - 1, size)] =
-            0.5 * (x[idx!(size - 2, size - 1, size)] + x[idx!(size - 1, size - 2, size)]);
+        // // Set corners
+        // x[idx!(0, 0, size)] = 0.5 * (x[idx!(1, 0, size)] + x[idx!(0, 1, size)]);
+        // x[idx!(0, size - 1, size)] =
+        //     0.5 * (x[idx!(1, size - 1, size)] + x[idx!(0, size - 2, size)]);
+        // x[idx!(size - 1, 0, size)] =
+        //     0.5 * (x[idx!(size - 2, 0, size)] + x[idx!(size - 1, 1, size)]);
+        // x[idx!(size - 1, size - 1, size)] =
+        //     0.5 * (x[idx!(size - 2, size - 1, size)] + x[idx!(size - 1, size - 2, size)]);
+
+        // for j in 2..size - 2 {
+        //     for i in 2..size - 2 {
+        //         x[idx!(i, 0, size)] = if orientation == Orientation::AdjustColumn {
+        //             -x[idx!(i, 1, size)]
+        //         } else {
+        //             x[idx!(i, 1, size)]
+        //         };
+        //         x[idx!(i, size - 1, size)] = if orientation == Orientation::AdjustColumn {
+        //             -x[idx!(i, size - 2, size)]
+        //         } else {
+        //             x[idx!(i, size - 2, size)]
+        //         };
+        //     }
+        // }
 
         for i in 1..size - 1 {
-            x[idx!(i, 0, size)] = if axis == Axis::Y {
+            x[idx!(i, 0, size)] = if orientation == Orientation::AdjustColumn {
                 -x[idx!(i, 1, size)]
             } else {
                 x[idx!(i, 1, size)]
             };
-            x[idx!(i, size - 1, size)] = if axis == Axis::Y {
+            x[idx!(i, size - 1, size)] = if orientation == Orientation::AdjustColumn {
                 -x[idx!(i, size - 2, size)]
             } else {
                 x[idx!(i, size - 2, size)]
@@ -254,19 +274,18 @@ impl Fluid {
         }
 
         for j in 1..size - 1 {
-            x[idx!(0, j, size)] = if axis == Axis::X {
+            x[idx!(0, j, size)] = if orientation == Orientation::AdjustRow {
                 -x[idx!(1, j, size)]
             } else {
                 x[idx!(1, j, size)]
             };
-            x[idx!(size - 1, j, size)] = if axis == Axis::X {
+            x[idx!(size - 1, j, size)] = if orientation == Orientation::AdjustRow {
                 -x[idx!(size - 2, j, size)]
             } else {
                 x[idx!(size - 2, j, size)]
             };
         }
 
-        /*
         x[idx!(0, 0, size)] = 0.5 * (x[idx!(1, 0, size)] + x[idx!(0, 1, size)]);
         x[idx!(0, size - 1, size)] =
             0.5 * (x[idx!(1, size - 1, size)] + x[idx!(0, size - 2, size)]);
@@ -274,11 +293,10 @@ impl Fluid {
             0.5 * (x[idx!(size - 2, 0, size)] + x[idx!(size - 1, 1, size)]);
         x[idx!(size - 1, size - 1, size)] =
             0.5 * (x[idx!(size - 2, size - 1, size)] + x[idx!(size - 1, size - 2, size)]);
-        */
     }
 
     fn diffuse(
-        axis: Axis,
+        orientation: Orientation,
         x: &mut [f32],
         x0: &[f32],
         diffusion: &f32,
@@ -289,11 +307,20 @@ impl Fluid {
     ) {
         let size_float = (size - 2) as f32;
         let a = delta_t * diffusion * size_float * size_float;
-        Fluid::lin_solve(axis, x, x0, a, 1.0 + 4.0 * a, size, frames, cells_type);
+        Fluid::lin_solve(
+            orientation,
+            x,
+            x0,
+            a,
+            1.0 + 4.0 * a,
+            size,
+            frames,
+            cells_type,
+        );
     }
 
     fn lin_solve(
-        axis: Axis,
+        orientation: Orientation,
         x: &mut [f32],
         x0: &[f32],
         a: f32,
@@ -314,7 +341,7 @@ impl Fluid {
                         * c_recip;
                 }
             }
-            Fluid::set_boundaries(axis, x, size, cells_type);
+            Fluid::set_boundaries(orientation, x, size, cells_type);
         }
     }
 
@@ -339,9 +366,18 @@ impl Fluid {
             }
         }
 
-        Fluid::set_boundaries(Axis::ZeroAxis, div, size, cells_type);
-        Fluid::set_boundaries(Axis::ZeroAxis, p, size, cells_type);
-        Fluid::lin_solve(Axis::ZeroAxis, p, div, 1.0, 4.0, size, frames, cells_type);
+        Fluid::set_boundaries(Orientation::AdjustPassive, div, size, cells_type);
+        Fluid::set_boundaries(Orientation::AdjustPassive, p, size, cells_type);
+        Fluid::lin_solve(
+            Orientation::AdjustPassive,
+            p,
+            div,
+            1.0,
+            4.0,
+            size,
+            frames,
+            cells_type,
+        );
 
         for j in 1..size - 1 {
             for i in 1..size - 1 {
@@ -352,12 +388,12 @@ impl Fluid {
             }
         }
 
-        Fluid::set_boundaries(Axis::X, velocities_x, size, cells_type);
-        Fluid::set_boundaries(Axis::Y, velocities_y, size, cells_type);
+        Fluid::set_boundaries(Orientation::AdjustRow, velocities_x, size, cells_type);
+        Fluid::set_boundaries(Orientation::AdjustColumn, velocities_y, size, cells_type);
     }
 
     fn advect(
-        axis: Axis,
+        orientation: Orientation,
         densities: &mut [f32],
         densities0: &[f32],
         velocities_x: &[f32],
@@ -409,7 +445,7 @@ impl Fluid {
                         + t1 * densities0[idx!(i1_int, j1_int, size)]);
             }
         }
-        Fluid::set_boundaries(axis, densities, size, cells_type);
+        Fluid::set_boundaries(orientation, densities, size, cells_type);
     }
 
     /// Simulates the next step of the fluid's movement.
@@ -417,24 +453,24 @@ impl Fluid {
     /// and constraining it to not get out of the wall's boundaries
     pub fn step(&mut self) {
         Fluid::diffuse(
-            Axis::X,
+            Orientation::AdjustRow,
             &mut self.velocities_x0,
             &self.velocities_x,
             &self.fluid_configs.viscousity,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
             self.simulation_configs.frames,
-            &self.allowed_cells,
+            &self.cells_type,
         );
         Fluid::diffuse(
-            Axis::Y,
+            Orientation::AdjustColumn,
             &mut self.velocities_y0,
             &self.velocities_y,
             &self.fluid_configs.viscousity,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
             self.simulation_configs.frames,
-            &self.allowed_cells,
+            &self.cells_type,
         );
 
         Fluid::project(
@@ -444,29 +480,29 @@ impl Fluid {
             &mut self.velocities_y,
             self.simulation_configs.size,
             self.simulation_configs.frames,
-            &self.allowed_cells,
+            &self.cells_type,
         );
 
         Fluid::advect(
-            Axis::X,
+            Orientation::AdjustRow,
             &mut self.velocities_x,
             &self.velocities_x0,
             &self.velocities_x0,
             &self.velocities_y0,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
-            &self.allowed_cells,
+            &self.cells_type,
         );
 
         Fluid::advect(
-            Axis::Y,
+            Orientation::AdjustColumn,
             &mut self.velocities_y,
             &self.velocities_y0,
             &self.velocities_x0,
             &self.velocities_y0,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
-            &self.allowed_cells,
+            &self.cells_type,
         );
 
         Fluid::project(
@@ -476,29 +512,29 @@ impl Fluid {
             &mut self.velocities_y0,
             self.simulation_configs.size,
             self.simulation_configs.frames,
-            &self.allowed_cells,
+            &self.cells_type,
         );
 
         Fluid::diffuse(
-            Axis::ZeroAxis,
+            Orientation::AdjustPassive,
             &mut self.s,
             &self.density,
             &self.fluid_configs.diffusion,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
             self.simulation_configs.frames,
-            &self.allowed_cells,
+            &self.cells_type,
         );
 
         Fluid::advect(
-            Axis::ZeroAxis,
+            Orientation::AdjustPassive,
             &mut self.density,
             &self.s,
             &self.velocities_x,
             &self.velocities_y,
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
-            &self.allowed_cells,
+            &self.cells_type,
         );
 
         self.s = self.density.clone();
@@ -523,6 +559,26 @@ impl Fluid {
             for i in 0..self.simulation_configs.size {
                 self.add_velocity(i, j, 1.0, 1.0);
             }
+        }
+    }
+
+    fn init_cells_type(&mut self) {
+        for i in 0..self.simulation_configs.size {
+            self.cells_type[idx!(i, 0, self.simulation_configs.size)] = ContainerWall::DefaultWall;
+            self.cells_type[idx!(
+                i,
+                self.simulation_configs.size - 1,
+                self.simulation_configs.size
+            )] = ContainerWall::DefaultWall;
+        }
+
+        for j in 0..self.simulation_configs.size {
+            self.cells_type[idx!(0, j, self.simulation_configs.size)] = ContainerWall::DefaultWall;
+            self.cells_type[idx!(
+                self.simulation_configs.size - 1,
+                j,
+                self.simulation_configs.size
+            )] = ContainerWall::DefaultWall;
         }
     }
 
@@ -559,24 +615,7 @@ impl Fluid {
     pub fn init(&mut self) {
         self.init_velocities();
         self.init_density();
-    }
-
-    #[cfg(debug_assertions)]
-    fn print_area(&self, point: &line_drawing::Point<i64>) {
-        let vertex_idx = idx!(point.0, point.1, i64::from(self.simulation_configs.size));
-        let symbol = match self.allowed_cells[vertex_idx] {
-            ContainerWall::West => "| W ",
-            ContainerWall::NorthWest => "|NW ",
-            ContainerWall::North => "| N ",
-            ContainerWall::NorthEast => "|NE ",
-            ContainerWall::East => "| E ",
-            ContainerWall::SouthEast => "|SE ",
-            ContainerWall::South => "| S ",
-            ContainerWall::SouthWest => "|SW ",
-            ContainerWall::DefaultWall => "| D ",
-            ContainerWall::NoWall => "| X ",
-        };
-        print!("{}", symbol);
+        self.init_cells_type();
     }
 
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
@@ -606,24 +645,13 @@ impl Fluid {
 
             match east_neighbour_point {
                 Some(east_point) => {
-                    println!("west -> east: {}", east_point.0 - west_point.0);
                     for x_coordinate in west_point.0..=east_point.0 {
                         let idx = idx!(
                             x_coordinate,
                             east_point.1,
                             i64::from(self.simulation_configs.size)
                         );
-                        self.allowed_cells[idx] = ContainerWall::DefaultWall;
-
-                        #[cfg(debug_assertions)]
-                        {
-                            self.print_area(&(x_coordinate, east_point.1));
-                        }
-                    }
-                    #[cfg(debug_assertions)]
-                    {
-                        self.print_area(&east_neighbour_point.unwrap());
-                        println!("");
+                        self.cells_type[idx] = ContainerWall::DefaultWall;
                     }
                 }
 
@@ -646,8 +674,8 @@ impl Fluid {
         let obstacle_sides = obstacle.get_perimeter();
         for (side_key, points) in obstacle_sides {
             for point in points {
-                self.allowed_cells
-                    [idx!(point.0, point.1, i64::from(self.simulation_configs.size))] = *side_key;
+                self.cells_type[idx!(point.0, point.1, i64::from(self.simulation_configs.size))] =
+                    *side_key;
             }
         }
 
@@ -674,7 +702,7 @@ mod tests {
         ));
 
         let mut count: u64 = 0;
-        for cell in fluid.allowed_cells {
+        for cell in fluid.cells_type {
             if cell == ContainerWall::DefaultWall {
                 count += 1;
             }
