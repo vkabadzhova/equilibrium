@@ -1,5 +1,6 @@
 use super::fluid_configs_menu::FluidUiSettings;
 use super::simulation_configs_menu::SimulationUiSettings;
+use super::viewport_configs_menu::ViewportUiSettings;
 use super::Setting;
 use eframe::egui;
 use std::collections::BTreeSet;
@@ -11,6 +12,8 @@ pub enum SettingType {
     Fluid(FluidUiSettings),
     /// Used for describing the [`SimulationUiSettings`] type
     Simulation(SimulationUiSettings),
+    /// Used for describing the [`ViewportUiSettings`] type
+    Viewport(ViewportUiSettings),
 }
 
 impl Setting for SettingType {
@@ -18,6 +21,7 @@ impl Setting for SettingType {
         match self {
             SettingType::Fluid(fluid_ui_setting) => fluid_ui_setting.name(),
             SettingType::Simulation(simulation_ui_setting) => simulation_ui_setting.name(),
+            SettingType::Viewport(viewport_ui_setting) => viewport_ui_setting.name(),
         }
     }
 
@@ -25,6 +29,7 @@ impl Setting for SettingType {
         match self {
             SettingType::Fluid(fluid_ui_setting) => fluid_ui_setting.show(ctx, open),
             SettingType::Simulation(simulation_ui_setting) => simulation_ui_setting.show(ctx, open),
+            SettingType::Viewport(viewport_ui_setting) => viewport_ui_setting.show(ctx, open),
         };
     }
 }
@@ -48,6 +53,7 @@ impl Default for SettingsMenu {
                     super::simulation_configs_menu::SimulationUiSettings::default(),
                 ),
                 SettingType::Fluid(super::fluid_configs_menu::FluidUiSettings::default()),
+                SettingType::Viewport(super::viewport_configs_menu::ViewportUiSettings::default()),
             ],
             true,
         )

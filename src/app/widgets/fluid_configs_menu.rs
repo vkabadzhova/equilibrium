@@ -21,7 +21,7 @@ impl Default for FluidUiSettings {
 
 impl super::Setting for FluidUiSettings {
     fn name(&self) -> &'static str {
-        "🗄Fluid settings"
+        "Fluid"
     }
 
     fn show(&mut self, ctx: &egui::CtxRef, open: &mut bool) {

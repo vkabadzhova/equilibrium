@@ -91,12 +91,10 @@ impl Renderer {
 
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.fluid.density[idx!(x, y, self.fluid.simulation_configs.size)];
-            let cell_type =
-                self.fluid.cells_type[idx!(x, y, self.fluid.simulation_configs.size)];
+            let cell_type = self.fluid.cells_type[idx!(x, y, self.fluid.simulation_configs.size)];
             if cell_type == ContainerWall::DefaultWall {
                 *pixel = image::Rgba([255, 0, 0, 1]);
-            }
-            else if density != 0.0 && cell_type == ContainerWall::NoWall {
+            } else if density != 0.0 && cell_type == ContainerWall::NoWall {
                 *pixel = image::Rgba([
                     (density * fluid_rgba[0] as f32) as u8,
                     fluid_rgba[1],
@@ -145,6 +143,7 @@ impl Renderer {
                 SettingType::Simulation(simulation_ui_config) => {
                     self.next_simulation_configs = simulation_ui_config.simulation_configs
                 }
+                _ => {}
             }
         }
     }
