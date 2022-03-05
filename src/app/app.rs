@@ -1,5 +1,5 @@
 use crate::app::app::egui::ScrollArea;
-use crate::app::widgets::widgets_menu::SettingsMenu;
+use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
 use crate::simulation::renderer::density_img_path;
 use crate::simulation::renderer::Renderer;
 use crossbeam_utils::thread;
@@ -47,11 +47,22 @@ impl App {
         }
     }
 
-    fn show_image(image_path: &str, frame: &epi::Frame, ui: &mut egui::Ui) {
-        // TODO: make image size customizeable by using a widget
+    fn get_resolution(&mut self) -> Option<u8> {
+        for i in self.settings_menu.settings_menu.iter() {
+            match i {
+                SettingType::Viewport(result) => {
+                    return Some(result.image_resize_factor);
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    fn show_image(image_path: &str, resolution: u8, frame: &epi::Frame, ui: &mut egui::Ui) {
         let image = image::open(image_path).unwrap().resize(
-            ui.available_width() as u32 / 2,
-            ui.available_height() as u32 / 2,
+            (ui.available_width() * (resolution as f32 / 100.0)) as u32,
+            (ui.available_height() * (resolution as f32 / 100.0)) as u32,
             Triangle,
         );
         let size = image.dimensions();
@@ -84,6 +95,8 @@ impl App {
         if current_frame > self.current_frame {
             App::show_image(
                 density_img_path!(&self.renderer.rendered_images_dir, current_frame),
+                self.get_resolution()
+                    .expect("A viewport setting should exsist."),
                 frame,
                 ui,
             );
@@ -200,6 +213,8 @@ impl epi::App for App {
             } else if self.is_simulated {
                 App::show_image(
                     density_img_path!(&self.renderer.rendered_images_dir, self.current_frame),
+                    self.get_resolution()
+                        .expect("A viewport setting should exsist."),
                     frame,
                     ui,
                 );

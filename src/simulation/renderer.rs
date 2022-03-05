@@ -18,7 +18,6 @@ macro_rules! density_img_path {
 pub(crate) use density_img_path;
 
 use super::fluid::ContainerWall;
-use super::obstacle;
 
 /// Utility for visualization and interaction with the fluid simulation.
 ///
@@ -60,7 +59,7 @@ impl Renderer {
     }
 
     /// Creates new Renderer
-    pub fn new(mut fluid: Fluid) -> Renderer {
+    pub fn new(fluid: Fluid) -> Renderer {
         Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),

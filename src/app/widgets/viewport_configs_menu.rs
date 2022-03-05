@@ -7,7 +7,7 @@ pub struct ViewportUiSettings {
     enabled: bool,
     /// Configurations for the size of the simulation image as regards the size of the central panel
     /// *Note:* in percents
-    pub image_resize_factor: u32,
+    pub image_resize_factor: u8,
     /// Configuration for the amount of seconds between frame change for the play button
     pub play_simulation_speed: f32,
 }
@@ -83,6 +83,8 @@ impl ViewportUiSettings {
         ui.add(egui::DragValue::new(image_resize_factor).speed(1.0));
         if *image_resize_factor > 100 {
             *image_resize_factor = 100;
+        } else if *image_resize_factor <= 1 {
+            *image_resize_factor = 1;
         }
         ui.end_row();
 
