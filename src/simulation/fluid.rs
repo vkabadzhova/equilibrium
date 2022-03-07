@@ -623,7 +623,10 @@ impl Fluid {
         );
     }
 
-    /// Initialized the fluid
+    /// Initialize the fluid. Every fluid should be initialized prior any manipulation.
+    /// The [`Fluid::new`] and [`Fluid::init`] functions are divided into two separate steps
+    /// since the initialization might be very computationally expensive if the simulated fluid is
+    /// with high resolution
     pub fn init(&mut self) {
         self.init_velocities();
         self.init_density();
@@ -707,9 +710,13 @@ mod tests {
         let simulation_configs = SimulationConfigs::default();
 
         let mut fluid = Fluid::new(fluid_configs, simulation_configs);
+
+        let obstacle_point_1: (i64, i64) = (100, 100);
+        let obstacle_point_2: (i64, i64) = (120, 80);
+
         fluid.set_obstacle(&Rectangle::new(
-            (100, 100),
-            (120, 80),
+            obstacle_point_1,
+            obstacle_point_2,
             fluid.simulation_configs.size,
         ));
 
@@ -720,8 +727,8 @@ mod tests {
             }
         }
 
-        let obstalce_vertical_wall = 100 - 80 - 1 - 2;
-        let obstacle_horizontal_wall = 120 - 100 - 1;
+        let obstalce_vertical_wall = obstacle_point_1.1 - obstacle_point_2.1 + 1;
+        let obstacle_horizontal_wall = obstacle_point_2.0 - obstacle_point_1.0 + 1;
         let vertical_wall_len: u64 = (simulation_configs.size - 1 - 2).into();
         let horizontal_wall_len: u64 = (simulation_configs.size - 1).into();
 
@@ -732,10 +739,7 @@ mod tests {
 
         assert_eq!(
             count,
-            2 * (vertical_wall_len
-                + horizontal_wall_len
-                + obstacle_horizontal_wall
-                + obstalce_vertical_wall)
+            (obstacle_horizontal_wall * obstalce_vertical_wall) as u64
         );
     }
 }
