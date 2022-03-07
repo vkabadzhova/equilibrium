@@ -192,49 +192,61 @@ impl Fluid {
         cells_type: &Vec<ContainerWall>,
     ) {
         let size = i64::from(size);
-        // for j in 0..size - 1 {
-        //     for i in 1..size - 1 {
-        //         let up_point_coordinates = (i, (j - 1).clamp(0, size - 1));
-        //         let down_point_coordinates = (i, (j + 1).clamp(0, size - 1));
-        //         let left_point_coordinates = ((i - 1).clamp(0, size - 1), j);
-        //         let right_point_coordinates = ((i + 1).clamp(0, size - 1), j);
+        for j in 0..=size - 1 {
+            for i in 0..=size - 1 {
+                if cells_type[idx!(i, j, size)] == ContainerWall::DefaultWall {
+                    continue;
+                }
 
-        //         match orientation {
-        //             Orientation::AdjustRow => {
-        //                 if cells_type
-        //                     [idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
-        //                     == ContainerWall::DefaultWall
-        //                 {
-        //                     x[idx!(i, j, size)] =
-        //                         -x[idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
-        //                 }
-        //                 if cells_type
-        //                     [idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
-        //                     == ContainerWall::DefaultWall
-        //                 {
-        //                     x[idx!(i, j, size)] =
-        //                         -x[idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
-        //                 }
-        //             }
-        //             Orientation::AdjustColumn => {
-        //                 if cells_type
-        //                     [idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
-        //                     == ContainerWall::DefaultWall
-        //                 {
-        //                     x[idx!(i, j, size)] =
-        //                         -x[idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
-        //                 }
-        //                 if cells_type[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
-        //                     == ContainerWall::DefaultWall
-        //                 {
-        //                     x[idx!(i, j, size)] =
-        //                         -x[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
-        //                 }
-        //             }
-        //             _ => {}
-        //         }
-        //     }
-        // }
+                let up_point_coordinates = (i, (j - 1).clamp(0, size - 1));
+                let down_point_coordinates = (i, (j + 1).clamp(0, size - 1));
+                let left_point_coordinates = ((i - 1).clamp(0, size - 1), j);
+                let right_point_coordinates = ((i + 1).clamp(0, size - 1), j);
+
+                match orientation {
+                    Orientation::AdjustRow => {
+                        if cells_type
+                            [idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
+                            == ContainerWall::DefaultWall
+                        {
+                            x[idx!(i, j, size)] =
+                                -x[idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
+                        }
+                        if cells_type
+                            [idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
+                            == ContainerWall::DefaultWall
+                        {
+                            x[idx!(i, j, size)] =
+                                -x[idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
+                        }
+                    }
+                    Orientation::AdjustColumn => {
+                        if cells_type
+                            [idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
+                            == ContainerWall::DefaultWall
+                        {
+                            x[idx!(i, j, size)] =
+                                -x[idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
+                        }
+                        if cells_type[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
+                            == ContainerWall::DefaultWall
+                        {
+                            x[idx!(i, j, size)] =
+                                -x[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
+                        }
+                    }
+                    Orientation::AdjustPassive => {
+                        // NB: works only for the edges
+
+                        x[idx!(i, 0, size)] = x[idx!(i, 1, size)];
+                        x[idx!(i, size - 1, size)] = x[idx!(i, size - 2, size)];
+
+                        x[idx!(0, j, size)] = x[idx!(1, j, size)];
+                        x[idx!(size - 1, j, size)] = x[idx!(size - 2, j, size)];
+                    }
+                }
+            }
+        }
 
         // // Set corners
         // x[idx!(0, 0, size)] = 0.5 * (x[idx!(1, 0, size)] + x[idx!(0, 1, size)]);
@@ -260,31 +272,31 @@ impl Fluid {
         //     }
         // }
 
-        for i in 1..size - 1 {
-            x[idx!(i, 0, size)] = if orientation == Orientation::AdjustColumn {
-                -x[idx!(i, 1, size)]
-            } else {
-                x[idx!(i, 1, size)]
-            };
-            x[idx!(i, size - 1, size)] = if orientation == Orientation::AdjustColumn {
-                -x[idx!(i, size - 2, size)]
-            } else {
-                x[idx!(i, size - 2, size)]
-            };
-        }
+        // for i in 1..size - 1 {
+        //     x[idx!(i, 0, size)] = if orientation == Orientation::AdjustColumn {
+        //         -x[idx!(i, 1, size)]
+        //     } else {
+        //         x[idx!(i, 1, size)]
+        //     };
+        //     x[idx!(i, size - 1, size)] = if orientation == Orientation::AdjustColumn {
+        //         -x[idx!(i, size - 2, size)]
+        //     } else {
+        //         x[idx!(i, size - 2, size)]
+        //     };
+        // }
 
-        for j in 1..size - 1 {
-            x[idx!(0, j, size)] = if orientation == Orientation::AdjustRow {
-                -x[idx!(1, j, size)]
-            } else {
-                x[idx!(1, j, size)]
-            };
-            x[idx!(size - 1, j, size)] = if orientation == Orientation::AdjustRow {
-                -x[idx!(size - 2, j, size)]
-            } else {
-                x[idx!(size - 2, j, size)]
-            };
-        }
+        // for j in 1..size - 1 {
+        //     x[idx!(0, j, size)] = if orientation == Orientation::AdjustRow {
+        //         -x[idx!(1, j, size)]
+        //     } else {
+        //         x[idx!(1, j, size)]
+        //     };
+        //     x[idx!(size - 1, j, size)] = if orientation == Orientation::AdjustRow {
+        //         -x[idx!(size - 2, j, size)]
+        //     } else {
+        //         x[idx!(size - 2, j, size)]
+        //     };
+        // }
 
         x[idx!(0, 0, size)] = 0.5 * (x[idx!(1, 0, size)] + x[idx!(0, 1, size)]);
         x[idx!(0, size - 1, size)] =
