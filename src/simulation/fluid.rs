@@ -69,7 +69,7 @@ macro_rules! idx {
 /// given by the sum of the vector in the velocities_x and velocities_y coefficients
 /// that form a part of normalized vectors, too.
 ///
-///              ^
+///
 /// velocities_y |^
 ///              | \  sum of the two vectors forms a new vector: the direction of the
 ///              |  \ fluid in that exact cell
@@ -142,7 +142,6 @@ impl Fluid {
     /// ============== Working principle =================
     /// A cell's velocity vector is a combination of the `velocities_x` and `velocities_y`
     ///
-    ///              ^
     /// velocities_y |^
     ///              | \  sum of the two vectors forms a new vector: the direction of the
     ///              |  \ fluid in that exact cell
@@ -152,7 +151,6 @@ impl Fluid {
     /// Mirroring of the vector with regards to Oy is made by replacing the x component of the
     /// vector with its opposite number (the same value, but with the opposite sign)
     ///
-    ///                      ^
     /// new vector which    ^|^
     /// mirrors the        / | \  sum of the two vectors forms a new vector: the direction of the
     /// original          /  |  \ fluid in that exact cell
@@ -173,7 +171,6 @@ impl Fluid {
     /// *Note 3.:* The corners do this mirroring for both their x and y component which results in
     /// a vector symmetrical by both Ox and Oy.
     ///
-    ///                      ^
     ///   mirrored vector   ^|^   (1)
     ///   by Oy (2)        / | \  sum of the two vectors forms a new vector: the direction of the
     ///                   /  |  \ fluid in that exact cell
