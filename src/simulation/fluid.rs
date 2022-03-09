@@ -251,56 +251,6 @@ impl Fluid {
             }
         }
 
-        // // Set corners
-        // x[idx!(0, 0, size)] = 0.5 * (x[idx!(1, 0, size)] + x[idx!(0, 1, size)]);
-        // x[idx!(0, size - 1, size)] =
-        //     0.5 * (x[idx!(1, size - 1, size)] + x[idx!(0, size - 2, size)]);
-        // x[idx!(size - 1, 0, size)] =
-        //     0.5 * (x[idx!(size - 2, 0, size)] + x[idx!(size - 1, 1, size)]);
-        // x[idx!(size - 1, size - 1, size)] =
-        //     0.5 * (x[idx!(size - 2, size - 1, size)] + x[idx!(size - 1, size - 2, size)]);
-
-        // for j in 2..size - 2 {
-        //     for i in 2..size - 2 {
-        //         x[idx!(i, 0, size)] = if orientation == Orientation::AdjustColumn {
-        //             -x[idx!(i, 1, size)]
-        //         } else {
-        //             x[idx!(i, 1, size)]
-        //         };
-        //         x[idx!(i, size - 1, size)] = if orientation == Orientation::AdjustColumn {
-        //             -x[idx!(i, size - 2, size)]
-        //         } else {
-        //             x[idx!(i, size - 2, size)]
-        //         };
-        //     }
-        // }
-
-        // for i in 1..size - 1 {
-        //     x[idx!(i, 0, size)] = if orientation == Orientation::AdjustColumn {
-        //         -x[idx!(i, 1, size)]
-        //     } else {
-        //         x[idx!(i, 1, size)]
-        //     };
-        //     x[idx!(i, size - 1, size)] = if orientation == Orientation::AdjustColumn {
-        //         -x[idx!(i, size - 2, size)]
-        //     } else {
-        //         x[idx!(i, size - 2, size)]
-        //     };
-        // }
-
-        // for j in 1..size - 1 {
-        //     x[idx!(0, j, size)] = if orientation == Orientation::AdjustRow {
-        //         -x[idx!(1, j, size)]
-        //     } else {
-        //         x[idx!(1, j, size)]
-        //     };
-        //     x[idx!(size - 1, j, size)] = if orientation == Orientation::AdjustRow {
-        //         -x[idx!(size - 2, j, size)]
-        //     } else {
-        //         x[idx!(size - 2, j, size)]
-        //     };
-        // }
-
         x[idx!(0, 0, size)] = 0.5 * (x[idx!(1, 0, size)] + x[idx!(0, 1, size)]);
         x[idx!(0, size - 1, size)] =
             0.5 * (x[idx!(1, size - 1, size)] + x[idx!(0, size - 2, size)]);
@@ -597,9 +547,9 @@ impl Fluid {
         }
 
         //TODO:
-        //for obstalce in self.obstacles {
-        // self.fill_obstacle(&obstacle);
-        //}
+        for obstacle in self.obstacles.copy() {
+            self.fill_obstacle(&mut *obstacle);
+        }
         self.set_obstacle(Box::new(crate::simulation::obstacle::Rectangle::new(
             (50, 120),
             (127, 110),
