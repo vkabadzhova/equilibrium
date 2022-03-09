@@ -1,10 +1,10 @@
 /// Menu with settings for the fluid
-pub mod fluid_configs_menu;
+pub mod fluid_widget;
 /// Menu with simulation settings such as number of frames, velocity of simulation, etc.
-pub mod simulation_configs_menu;
+pub mod simulation_widget;
 /// Menu with simulation settings such as simulation play speed, size of the rendered image while
 /// displaying on the screen, etc.
-pub mod viewport_configs_menu;
+pub mod viewport_widget;
 /// The main menu window from which other settings can be pulled out via checkboxes
 pub mod widgets_menu;
 

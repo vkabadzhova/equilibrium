@@ -1,6 +1,6 @@
-use super::fluid_configs_menu::FluidUiSettings;
-use super::simulation_configs_menu::SimulationUiSettings;
-use super::viewport_configs_menu::ViewportUiSettings;
+use super::fluid_widget::FluidWidget;
+use super::simulation_widget::SimulationWidget;
+use super::viewport_widget::ViewportWidget;
 use super::Setting;
 use eframe::egui;
 use std::collections::BTreeSet;
@@ -8,28 +8,28 @@ use std::collections::BTreeSet;
 /// Enum describing the various widgets' types. This is what unifies all the widgets
 /// and is used fot storing them in collections.
 pub enum SettingType {
-    /// Used for describing the [`FluidUiSettings`] type
-    Fluid(FluidUiSettings),
-    /// Used for describing the [`SimulationUiSettings`] type
-    Simulation(SimulationUiSettings),
-    /// Used for describing the [`ViewportUiSettings`] type
-    Viewport(ViewportUiSettings),
+    /// Used for describing the [`FluidWidget`] type
+    Fluid(FluidWidget),
+    /// Used for describing the [`SimulationWidget`] type
+    Simulation(SimulationWidget),
+    /// Used for describing the [`ViewportWidget`] type
+    Viewport(ViewportWidget),
 }
 
 impl Setting for SettingType {
     fn name(&self) -> &'static str {
         match self {
-            SettingType::Fluid(fluid_ui_setting) => fluid_ui_setting.name(),
-            SettingType::Simulation(simulation_ui_setting) => simulation_ui_setting.name(),
-            SettingType::Viewport(viewport_ui_setting) => viewport_ui_setting.name(),
+            SettingType::Fluid(fluid_widget) => fluid_widget.name(),
+            SettingType::Simulation(simulation_widget) => simulation_widget.name(),
+            SettingType::Viewport(viewport_widget) => viewport_widget.name(),
         }
     }
 
     fn show(&mut self, ctx: &egui::CtxRef, open: &mut bool) {
         match self {
-            SettingType::Fluid(fluid_ui_setting) => fluid_ui_setting.show(ctx, open),
-            SettingType::Simulation(simulation_ui_setting) => simulation_ui_setting.show(ctx, open),
-            SettingType::Viewport(viewport_ui_setting) => viewport_ui_setting.show(ctx, open),
+            SettingType::Fluid(fluid_widget) => fluid_widget.show(ctx, open),
+            SettingType::Simulation(simulation_widget) => simulation_widget.show(ctx, open),
+            SettingType::Viewport(viewport_widget) => viewport_widget.show(ctx, open),
         };
     }
 }
@@ -49,11 +49,9 @@ impl Default for SettingsMenu {
     fn default() -> Self {
         Self::from_settings(
             vec![
-                SettingType::Simulation(
-                    super::simulation_configs_menu::SimulationUiSettings::default(),
-                ),
-                SettingType::Fluid(super::fluid_configs_menu::FluidUiSettings::default()),
-                SettingType::Viewport(super::viewport_configs_menu::ViewportUiSettings::default()),
+                SettingType::Simulation(super::simulation_widget::SimulationWidget::default()),
+                SettingType::Fluid(super::fluid_widget::FluidWidget::default()),
+                SettingType::Viewport(super::viewport_widget::ViewportWidget::default()),
             ],
             true,
         )
@@ -76,7 +74,7 @@ impl SettingsMenu {
         let mut open = BTreeSet::new();
         if should_open_first {
             open.insert(
-                super::simulation_configs_menu::SimulationUiSettings::default()
+                super::simulation_widget::SimulationWidget::default()
                     .name()
                     .to_owned(),
             );
@@ -127,14 +125,14 @@ fn set_open(open: &mut BTreeSet<String>, key: &'static str, is_open: bool) {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::widgets::widgets_menu::FluidUiSettings;
+    use crate::app::widgets::widgets_menu::FluidWidget;
     use crate::app::widgets::widgets_menu::SettingType;
     use crate::app::widgets::Setting;
 
     #[test]
     fn settingtype_name_works() {
-        let fluid_ui_setting = FluidUiSettings::default();
-        let fluid_setting_type = SettingType::Fluid(fluid_ui_setting);
-        assert_eq!(fluid_setting_type.name(), fluid_ui_setting.name());
+        let fluid_widget = FluidWidget::default();
+        let fluid_setting_type = SettingType::Fluid(fluid_widget);
+        assert_eq!(fluid_setting_type.name(), fluid_widget.name());
     }
 }

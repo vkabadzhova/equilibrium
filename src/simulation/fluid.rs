@@ -2,7 +2,6 @@ use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use crate::simulation::obstacle::Obstacle;
 use geo::algorithm::rotate::RotatePoint;
 use geo::{line_string, point};
-use log::debug;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
@@ -96,7 +95,13 @@ pub struct Fluid {
     /// Defines which cells are "allowed" for the fluid to run into and which are "obsticles"
     /// by also defining which side of a given obstacle a cell is via the [`ContainerWall`]
     pub cells_type: Vec<ContainerWall>,
+    /// Collection of all the obstacles
+    pub obstacles: Vec<Box<dyn Obstacle>>,
 }
+
+// Safety: No one besides us owns obstacle, so we can safely transfer the
+// Fluid to another thread if T can be safely transferred.
+unsafe impl Send for Fluid {}
 
 impl Fluid {
     /// Creates new Fluid struct
@@ -111,6 +116,7 @@ impl Fluid {
             velocities_x0: vec![0.0; fluid_field_size],
             velocities_y0: vec![0.0; fluid_field_size],
             cells_type: vec![ContainerWall::NoWall; fluid_field_size],
+            obstacles: Vec::new(),
             fluid_configs: init_fluid,
             simulation_configs: init_simulation,
         }
@@ -589,6 +595,16 @@ impl Fluid {
                 self.simulation_configs.size
             )] = ContainerWall::DefaultWall;
         }
+
+        //TODO:
+        //for obstalce in self.obstacles {
+        // self.fill_obstacle(&obstacle);
+        //}
+        self.set_obstacle(Box::new(crate::simulation::obstacle::Rectangle::new(
+            (50, 120),
+            (127, 110),
+            self.simulation_configs.size,
+        )));
     }
 
     /// Applies random force (noise) to the fluid to make the fluid run
@@ -631,58 +647,21 @@ impl Fluid {
     }
 
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
-    fn fill_obstacle(&mut self, obstacle: &dyn Obstacle) -> Vec<line_drawing::Point<i64>> {
-        let result: Vec<line_drawing::Point<i64>> = Vec::new();
-        let obstacle_perimeter = obstacle.get_perimeter();
+    fn fill_obstacle(&mut self, obstacle: &mut dyn Obstacle) {
+        let obstacle_area = obstacle.get_area();
 
-        for west_point in obstacle_perimeter.get(&ContainerWall::West).unwrap() {
-            // find the corresponding East neighbour point of the current West point of the
-            // obstacle, i.e. the one with the same y, but different x and replace all
-            // ContainerWall types with [`ContainerWall::DefaultWall`]
-            // Like so:
-            //  _ _ _ _ _
-            // | | | | | |
-            // |E|-|-|>|W|
-            // | | | | | |
-            // |_|_|_|_|_|
-            //
-            // where E - East, W - West, arrow (`-->`) - the path and its direction in which the algorithm
-            // will traverse and put [`ContainerWall::DefaultWall`] in between
-            //
-            let east_neighbour_point = obstacle_perimeter
-                .get(&ContainerWall::East)
-                .unwrap()
-                .into_iter()
-                .find(|east_point| east_point.1 == west_point.1 && east_point.0 != west_point.0);
-
-            match east_neighbour_point {
-                Some(east_point) => {
-                    for x_coordinate in west_point.0..=east_point.0 {
-                        let idx = idx!(
-                            x_coordinate,
-                            east_point.1,
-                            i64::from(self.simulation_configs.size)
-                        );
-                        self.cells_type[idx] = ContainerWall::DefaultWall;
-                    }
-                }
-
-                None => {
-                    debug!(
-                        "West point ({}, {}) does not have a corresponding east.",
-                        west_point.0.to_string(),
-                        west_point.1.to_string()
-                    )
-                }
-            }
+        for &(x, y) in obstacle_area {
+            println!("x: {}, y: {}", x, y);
+            self.cells_type[idx!(x, y, self.simulation_configs.size as i64)] =
+                ContainerWall::DefaultWall;
         }
-
-        result
     }
 
-    /// Given the points of a obstacle, tell the fluid to avoid the object's points by telling
-    /// each point's [`ContainerWall`] side
-    pub fn set_obstacle(&mut self, obstacle: &dyn Obstacle) {
+    /// Given the points of a obstacle, tell the fluid to avoid the object's points
+    /// by containing each point's [`ContainerWall`] type
+    pub fn set_obstacle(&mut self, obstacle: Box<dyn Obstacle>) {
+        self.obstacles.push(obstacle);
+        /*
         let obstacle_sides = obstacle.get_perimeter();
         for (side_key, points) in obstacle_sides {
             for point in points {
@@ -692,6 +671,7 @@ impl Fluid {
         }
 
         self.fill_obstacle(obstacle);
+        */
     }
 }
 
@@ -711,11 +691,11 @@ mod tests {
         let obstacle_point_1: (i64, i64) = (100, 100);
         let obstacle_point_2: (i64, i64) = (120, 80);
 
-        fluid.set_obstacle(&Rectangle::new(
+        fluid.set_obstacle(Box::new(Rectangle::new(
             obstacle_point_1,
             obstacle_point_2,
             fluid.simulation_configs.size,
-        ));
+        )));
 
         let mut count: u64 = 0;
         for cell in fluid.cells_type {

@@ -1,30 +1,27 @@
+use crate::simulation::configs::SimulationConfigs;
 use eframe::egui;
 
 /// Shows off one example of each major type of widget.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[derive(Copy, Clone)]
-pub struct ViewportUiSettings {
+pub struct SimulationWidget {
     enabled: bool,
-    /// Configurations for the size of the simulation image as regards the size of the central panel
-    /// *Note:* in percents
-    pub image_resize_factor: u8,
-    /// Configuration for the amount of seconds between frame change for the play button
-    pub play_simulation_speed: f32,
+    /// The configurations for the simulation
+    pub simulation_configs: SimulationConfigs,
 }
 
-impl Default for ViewportUiSettings {
+impl Default for SimulationWidget {
     fn default() -> Self {
         Self {
             enabled: true,
-            image_resize_factor: 50,
-            play_simulation_speed: 0.1,
+            simulation_configs: SimulationConfigs::default(),
         }
     }
 }
 
-impl super::Setting for ViewportUiSettings {
+impl super::Setting for SimulationWidget {
     fn name(&self) -> &'static str {
-        "Viewport"
+        "Simulation"
     }
 
     fn show(&mut self, ctx: &egui::CtxRef, open: &mut bool) {
@@ -39,7 +36,7 @@ impl super::Setting for ViewportUiSettings {
     }
 }
 
-impl super::View for ViewportUiSettings {
+impl super::View for SimulationWidget {
     fn ui(&mut self, ui: &mut egui::Ui) {
         ui.add_enabled_ui(self.enabled, |ui| {
             egui::Grid::new("my_grid")
@@ -69,30 +66,32 @@ impl super::View for ViewportUiSettings {
     }
 }
 
-impl ViewportUiSettings {
+impl SimulationWidget {
     fn gallery_grid_contents(&mut self, ui: &mut egui::Ui) {
         let Self {
             enabled,
-            image_resize_factor,
-            play_simulation_speed,
+            simulation_configs,
         } = self;
 
-        ui.label("Rendered image resize factor");
-        //.on_hover_text("Configurations for the size of the simulation image as regards the size of the central panel.
-        //*Note:* in percents");
-        ui.add(egui::DragValue::new(image_resize_factor).speed(1.0));
-        if *image_resize_factor > 100 {
-            *image_resize_factor = 100;
-        } else if *image_resize_factor <= 1 {
-            *image_resize_factor = 1;
+        ui.label("Number of frames");
+        ui.add(egui::DragValue::new(&mut simulation_configs.frames).speed(1.0));
+        if simulation_configs.frames < 1 {
+            simulation_configs.frames = 1;
         }
         ui.end_row();
 
-        ui.label("Simulation spped on play");
-        //.on_hover_text(" Configuration for the amount of seconds between frame change for the play button");
-        ui.add(egui::DragValue::new(play_simulation_speed).speed(0.01));
-        if *play_simulation_speed < 0.0 {
-            *play_simulation_speed = 0.00;
+        ui.label("Simulation step (delta_t)")
+            .on_hover_text("delta_t");
+        ui.add(egui::DragValue::new(&mut simulation_configs.delta_t).speed(0.01));
+        if simulation_configs.delta_t < 0.0 {
+            simulation_configs.delta_t = 0.00;
+        }
+        ui.end_row();
+
+        ui.label("Simulation window size");
+        ui.add(egui::DragValue::new(&mut simulation_configs.size).speed(1.0));
+        if simulation_configs.size < 1 {
+            simulation_configs.size = 1;
         }
         ui.end_row();
     }

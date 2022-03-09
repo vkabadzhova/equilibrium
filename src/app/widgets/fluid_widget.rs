@@ -4,13 +4,13 @@ use eframe::egui;
 /// Shows off one example of each major type of widget.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[derive(Copy, Clone)]
-pub struct FluidUiSettings {
+pub struct FluidWidget {
     enabled: bool,
     /// The fluid configurations
     pub fluid_configs: FluidConfigs,
 }
 
-impl Default for FluidUiSettings {
+impl Default for FluidWidget {
     fn default() -> Self {
         Self {
             enabled: true,
@@ -19,7 +19,7 @@ impl Default for FluidUiSettings {
     }
 }
 
-impl super::Setting for FluidUiSettings {
+impl super::Setting for FluidWidget {
     fn name(&self) -> &'static str {
         "Fluid"
     }
@@ -36,7 +36,7 @@ impl super::Setting for FluidUiSettings {
     }
 }
 
-impl super::View for FluidUiSettings {
+impl super::View for FluidWidget {
     fn ui(&mut self, ui: &mut egui::Ui) {
         ui.add_enabled_ui(self.enabled, |ui| {
             egui::Grid::new("my_grid")
@@ -50,7 +50,7 @@ impl super::View for FluidUiSettings {
     }
 }
 
-impl FluidUiSettings {
+impl FluidWidget {
     fn gallery_grid_contents(&mut self, ui: &mut egui::Ui) {
         let Self {
             enabled: _,

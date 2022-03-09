@@ -1,4 +1,5 @@
 use line_drawing::Bresenham;
+use log::debug;
 use std::collections::HashMap;
 
 use super::fluid::ContainerWall;
@@ -6,7 +7,10 @@ use super::fluid::ContainerWall;
 /// Defines every obstacle's behaviour
 pub trait Obstacle {
     /// Returns all countour points with their direction
-    fn get_perimeter(&self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>;
+    fn get_perimeter(&mut self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>;
+    /// Retrurns the all the coordinates which are part of the obstacle, including both its
+    /// parameter and inside
+    fn get_area(&mut self) -> &Vec<line_drawing::Point<i64>>;
 }
 
 /// Rectangle obstacle which is fit parallely with respect to the
@@ -20,7 +24,8 @@ pub struct Rectangle {
     pub down_right_point: line_drawing::Point<i64>,
     /// Collection with all the sides of an obstacle. The sides are
     /// defined via compass direction. See [`ContainerWall`].
-    sides: HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>,
+    perimeter: HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>,
+    area: Vec<line_drawing::Point<i64>>,
 }
 
 impl Rectangle {
@@ -30,17 +35,16 @@ impl Rectangle {
         down_right_point: line_drawing::Point<i64>,
         fluid_container_size: u32,
     ) -> Self {
-        let mut result = Self {
+        let result = Self {
             up_left_point: up_left_point,
             down_right_point: down_right_point,
-            sides: HashMap::new(),
+            perimeter: HashMap::new(),
+            area: Vec::new(),
         };
 
         if !result.are_all_points_valid(i64::from(fluid_container_size)) {
             panic!("Invalid input for Rectangle");
         }
-
-        result.calculate_sides();
 
         result
     }
@@ -61,7 +65,7 @@ impl Rectangle {
             .all(|e| *e < fluid_container_size)
     }
 
-    fn calculate_sides(&mut self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
+    fn calculate_perimeter(&mut self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
         let mut result: HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> = HashMap::new();
 
         // West wall
@@ -108,15 +112,69 @@ impl Rectangle {
             .collect(),
         );
 
-        self.sides = result;
+        self.perimeter = result;
 
-        &self.sides
+        &self.perimeter
+    }
+
+    fn calculate_area(&mut self) {
+        let mut result: Vec<line_drawing::Point<i64>> = Vec::new();
+        let obstacle_perimeter = self.get_perimeter();
+
+        for west_point in obstacle_perimeter.get(&ContainerWall::West).unwrap() {
+            // find the corresponding East neighbour point of the current West point of the
+            // obstacle, i.e. the one with the same y, but different x and replace all
+            // ContainerWall types with [`ContainerWall::DefaultWall`]
+            // Like so:
+            //  _ _ _ _ _
+            // | | | | | |
+            // |E|-|-|>|W|
+            // | | | | | |
+            // |_|_|_|_|_|
+            //
+            // where E - East, W - West, arrow (`-->`) - the path and its direction in which the algorithm
+            // will traverse and put [`ContainerWall::DefaultWall`] in between
+            //
+            let east_neighbour_point = obstacle_perimeter
+                .get(&ContainerWall::East)
+                .unwrap()
+                .into_iter()
+                .find(|east_point| east_point.1 == west_point.1 && east_point.0 != west_point.0);
+
+            match east_neighbour_point {
+                Some(east_point) => {
+                    for x_coordinate in west_point.0..=east_point.0 {
+                        result.push((x_coordinate, east_point.1));
+                    }
+                }
+
+                None => {
+                    debug!(
+                        "West point ({}, {}) does not have a corresponding east.",
+                        west_point.0.to_string(),
+                        west_point.1.to_string()
+                    )
+                }
+            }
+        }
     }
 }
 
 impl Obstacle for Rectangle {
-    fn get_perimeter(&self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
-        &self.sides
+    fn get_perimeter(&mut self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
+        if self.perimeter.is_empty() {
+            self.calculate_perimeter();
+        }
+
+        &self.perimeter
+    }
+
+    fn get_area(&mut self) -> &Vec<line_drawing::Point<i64>> {
+        if self.area.is_empty() {
+            self.calculate_area();
+        }
+
+        &self.area
     }
 }
 
@@ -136,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn rectangle_get_sides_direction_works() {
+    fn rectangle_get_perimeter_direction_works() {
         let rectangle_obstacle = Rectangle::new((8, 10), (10, 8), 128);
         let expected_result = HashMap::from([
             (ContainerWall::West, vec![(8, 8), (8, 9), (8, 10)]),
