@@ -150,7 +150,7 @@ impl Renderer {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::widgets::fluid_configs_menu::FluidUiSettings;
+    use crate::app::widgets::fluid_widget::FluidWidget;
     use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
     use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
     use crate::simulation::{fluid::Fluid, renderer::Renderer};

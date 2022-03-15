@@ -79,7 +79,9 @@ pub struct Fluid {
     pub fluid_configs: FluidConfigs,
     /// general configurations for the simulation itself
     pub simulation_configs: SimulationConfigs,
-    s: Vec<f32>,
+    /// We need scratch space for each array so that we can keep old values around while we
+    /// compute the new ones
+    scratch_space: Vec<f32>,
     /// the distributed densities for the given step
     pub density: Vec<f32>,
     /// the distributed velocities in the x direction for the given step.
@@ -109,7 +111,7 @@ impl Fluid {
         let fluid_field_size = (init_simulation.size * init_simulation.size) as usize;
 
         Fluid {
-            s: vec![0.0; fluid_field_size],
+            scratch_space: vec![0.0; fluid_field_size],
             density: vec![0.0; fluid_field_size],
             velocities_x: vec![0.0; fluid_field_size],
             velocities_y: vec![0.0; fluid_field_size],
@@ -125,7 +127,7 @@ impl Fluid {
     fn add_density(&mut self, x: u32, y: u32, amount: f32) {
         let idx = idx!(x, y, self.simulation_configs.size);
         self.density[idx] += amount;
-        self.s[idx] += amount;
+        self.scratch_space[idx] += amount;
     }
 
     fn add_velocity(&mut self, x: u32, y: u32, amount_x: f32, amount_y: f32) {
@@ -482,7 +484,7 @@ impl Fluid {
 
         Fluid::diffuse(
             Orientation::AdjustPassive,
-            &mut self.s,
+            &mut self.scratch_space,
             &self.density,
             &self.fluid_configs.diffusion,
             self.simulation_configs.size,
@@ -494,7 +496,7 @@ impl Fluid {
         Fluid::advect(
             Orientation::AdjustPassive,
             &mut self.density,
-            &self.s,
+            &self.scratch_space,
             &self.velocities_x,
             &self.velocities_y,
             self.simulation_configs.size,
@@ -502,7 +504,7 @@ impl Fluid {
             &self.cells_type,
         );
 
-        self.s = self.density.clone();
+        self.scratch_space = self.density.clone();
     }
 
     fn init_density(&mut self) {
@@ -547,9 +549,11 @@ impl Fluid {
         }
 
         //TODO:
-        for obstacle in self.obstacles.copy() {
+        /*
+        for obstacle in self.obstacles.iter_mut() {
             self.fill_obstacle(&mut *obstacle);
         }
+        */
         self.set_obstacle(Box::new(crate::simulation::obstacle::Rectangle::new(
             (50, 120),
             (127, 110),
@@ -609,19 +613,17 @@ impl Fluid {
 
     /// Given the points of a obstacle, tell the fluid to avoid the object's points
     /// by containing each point's [`ContainerWall`] type
-    pub fn set_obstacle(&mut self, obstacle: Box<dyn Obstacle>) {
-        self.obstacles.push(obstacle);
-        /*
+    pub fn set_obstacle(&mut self, mut obstacle: Box<dyn Obstacle>) {
         let obstacle_sides = obstacle.get_perimeter();
         for (side_key, points) in obstacle_sides {
             for point in points {
                 self.cells_type[idx!(point.0, point.1, i64::from(self.simulation_configs.size))] =
-                    *side_key;
+                    ContainerWall::DefaultWall;
             }
         }
 
-        self.fill_obstacle(obstacle);
-        */
+        self.fill_obstacle(&mut *obstacle);
+        self.obstacles.push(obstacle);
     }
 }
 
