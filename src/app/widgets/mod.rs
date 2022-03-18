@@ -1,5 +1,7 @@
 /// Menu with settings for the fluid
 pub mod fluid_widget;
+/// Menu for setting obstacles in the fluid simulation.
+pub mod obstacle_widget;
 /// Menu with simulation settings such as number of frames, velocity of simulation, etc.
 pub mod simulation_widget;
 /// Menu with simulation settings such as simulation play speed, size of the rendered image while

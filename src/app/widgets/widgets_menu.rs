@@ -1,4 +1,5 @@
 use super::fluid_widget::FluidWidget;
+use super::obstacle_widget::ObstacleWidget;
 use super::simulation_widget::SimulationWidget;
 use super::viewport_widget::ViewportWidget;
 use super::Setting;
@@ -14,6 +15,8 @@ pub enum SettingType {
     Simulation(SimulationWidget),
     /// Used for describing the [`ViewportWidget`] type
     Viewport(ViewportWidget),
+    /// Used for describing the [`ObstacleWidget`] type
+    Obstacle(ObstacleWidget),
 }
 
 impl Setting for SettingType {
@@ -22,6 +25,7 @@ impl Setting for SettingType {
             SettingType::Fluid(fluid_widget) => fluid_widget.name(),
             SettingType::Simulation(simulation_widget) => simulation_widget.name(),
             SettingType::Viewport(viewport_widget) => viewport_widget.name(),
+            SettingType::Obstacle(obstacle_widget) => obstacle_widget.name(),
         }
     }
 
@@ -30,6 +34,7 @@ impl Setting for SettingType {
             SettingType::Fluid(fluid_widget) => fluid_widget.show(ctx, open),
             SettingType::Simulation(simulation_widget) => simulation_widget.show(ctx, open),
             SettingType::Viewport(viewport_widget) => viewport_widget.show(ctx, open),
+            SettingType::Obstacle(obstacle_widget) => obstacle_widget.show(ctx, open),
         };
     }
 }
@@ -52,6 +57,7 @@ impl Default for SettingsMenu {
                 SettingType::Simulation(super::simulation_widget::SimulationWidget::default()),
                 SettingType::Fluid(super::fluid_widget::FluidWidget::default()),
                 SettingType::Viewport(super::viewport_widget::ViewportWidget::default()),
+                SettingType::Obstacle(super::obstacle_widget::ObstacleWidget::default()),
             ],
             true,
         )
