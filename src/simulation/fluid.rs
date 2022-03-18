@@ -97,20 +97,22 @@ pub struct Fluid {
     /// Defines which cells are "allowed" for the fluid to run into and which are "obsticles"
     /// by also defining which side of a given obstacle a cell is via the [`ContainerWall`]
     pub cells_type: Vec<ContainerWall>,
-    /// Collection of all the obstacles
-    pub obstacles: Vec<Box<dyn Obstacle>>,
 }
 
-// Safety: No one besides us owns obstacle, so we can safely transfer the
-// Fluid to another thread if T can be safely transferred.
-unsafe impl Send for Fluid {}
+impl Default for Fluid {
+    fn default() -> Self {
+        let mut result = Self::new(FluidConfigs::default(), SimulationConfigs::default());
+        result.init();
+        result
+    }
+}
 
 impl Fluid {
     /// Creates new Fluid struct
     pub fn new(init_fluid: FluidConfigs, init_simulation: SimulationConfigs) -> Self {
         let fluid_field_size = (init_simulation.size * init_simulation.size) as usize;
 
-        Fluid {
+        let mut result = Self {
             scratch_space: vec![0.0; fluid_field_size],
             density: vec![0.0; fluid_field_size],
             velocities_x: vec![0.0; fluid_field_size],
@@ -118,10 +120,12 @@ impl Fluid {
             velocities_x0: vec![0.0; fluid_field_size],
             velocities_y0: vec![0.0; fluid_field_size],
             cells_type: vec![ContainerWall::NoWall; fluid_field_size],
-            obstacles: Vec::new(),
             fluid_configs: init_fluid,
             simulation_configs: init_simulation,
-        }
+        };
+
+        result.init();
+        result
     }
 
     fn add_density(&mut self, x: u32, y: u32, amount: f32) {
@@ -547,18 +551,6 @@ impl Fluid {
                 self.simulation_configs.size
             )] = ContainerWall::DefaultWall;
         }
-
-        //TODO:
-        /*
-        for obstacle in self.obstacles.iter_mut() {
-            self.fill_obstacle(&mut *obstacle);
-        }
-        */
-        self.set_obstacle(Box::new(crate::simulation::obstacle::Rectangle::new(
-            (50, 120),
-            (127, 110),
-            self.simulation_configs.size,
-        )));
     }
 
     /// Applies random force (noise) to the fluid to make the fluid run
@@ -591,84 +583,25 @@ impl Fluid {
     }
 
     /// Initialize the fluid. Every fluid should be initialized prior any manipulation.
-    /// The [`Fluid::new`] and [`Fluid::init`] functions are divided into two separate steps
-    /// since the initialization might be very computationally expensive if the simulated fluid is
-    /// with high resolution
-    pub fn init(&mut self) {
+    fn init(&mut self) {
         self.init_velocities();
         self.init_density();
         self.init_cells_type();
     }
 
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
-    fn fill_obstacle(&mut self, obstacle: &mut dyn Obstacle) {
-        let obstacle_area = obstacle.get_area();
+    /// NB: works as approximation to the real obstacle. By approximating a rectangle.
+    pub fn fill_obstacle(&mut self, obstacle: &mut Box<dyn Obstacle>) {
+        let points = obstacle.get_approximate_points();
 
-        for &(x, y) in obstacle_area {
-            println!("x: {}, y: {}", x, y);
-            self.cells_type[idx!(x, y, self.simulation_configs.size as i64)] =
-                ContainerWall::DefaultWall;
-        }
-    }
-
-    /// Given the points of a obstacle, tell the fluid to avoid the object's points
-    /// by containing each point's [`ContainerWall`] type
-    pub fn set_obstacle(&mut self, mut obstacle: Box<dyn Obstacle>) {
-        let obstacle_sides = obstacle.get_perimeter();
-        for (side_key, points) in obstacle_sides {
-            for point in points {
-                self.cells_type[idx!(point.0, point.1, i64::from(self.simulation_configs.size))] =
+        for x in points[0].0..points[1].0 {
+            for y in points[1].1..points[0].1 {
+                self.cells_type[idx!(x, y, i64::from(self.simulation_configs.size))] =
                     ContainerWall::DefaultWall;
             }
         }
-
-        self.fill_obstacle(&mut *obstacle);
-        self.obstacles.push(obstacle);
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
-    use crate::simulation::fluid::{ContainerWall, Fluid};
-    use crate::simulation::obstacle::Rectangle;
-
-    #[test]
-    fn set_obstacle_works() {
-        let fluid_configs = FluidConfigs::default();
-        let simulation_configs = SimulationConfigs::default();
-
-        let mut fluid = Fluid::new(fluid_configs, simulation_configs);
-
-        let obstacle_point_1: (i64, i64) = (100, 100);
-        let obstacle_point_2: (i64, i64) = (120, 80);
-
-        fluid.set_obstacle(Box::new(Rectangle::new(
-            obstacle_point_1,
-            obstacle_point_2,
-            fluid.simulation_configs.size,
-        )));
-
-        let mut count: u64 = 0;
-        for cell in fluid.cells_type {
-            if cell == ContainerWall::DefaultWall {
-                count += 1;
-            }
-        }
-
-        let obstalce_vertical_wall = obstacle_point_1.1 - obstacle_point_2.1 + 1;
-        let obstacle_horizontal_wall = obstacle_point_2.0 - obstacle_point_1.0 + 1;
-        let vertical_wall_len: u64 = (simulation_configs.size - 1 - 2).into();
-        let horizontal_wall_len: u64 = (simulation_configs.size - 1).into();
-
-        println!("{}", obstalce_vertical_wall);
-        println!("{}", obstacle_horizontal_wall);
-        println!("{}", vertical_wall_len);
-        println!("{}", horizontal_wall_len);
-
-        assert_eq!(
-            count,
-            (obstacle_horizontal_wall * obstalce_vertical_wall) as u64
-        );
-    }
-}
+mod tests {}

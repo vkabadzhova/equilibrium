@@ -1,6 +1,7 @@
 use crate::app::widgets::widgets_menu::SettingType;
 use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use crate::simulation::fluid::Fluid;
+use crate::simulation::obstacle::Obstacle;
 use std::fs;
 use std::sync::mpsc::Sender;
 
@@ -46,6 +47,35 @@ pub struct Renderer {
     /// The directory in which the rendered images that result from the simulation
     /// are stored
     pub rendered_images_dir: String,
+
+    /// Collection of all the obstacles. To update the fluid's behaviour to correspond to the
+    /// obstacles, use [`update_obstacles`].
+    pub obstacles: Vec<Box<dyn Obstacle>>,
+}
+
+// Safety: No one besides us owns obstacle, so we can safely transfer the
+// Fluid to another thread if T can be safely transferred.
+unsafe impl Send for Renderer {}
+
+impl Default for Renderer {
+    /// Add default Renderer, containing an obstacle and default [`FluidConfigs`] and [`SimulationConfigs`]
+    fn default() -> Self {
+        let fluid = Fluid::default();
+        let mut result = Self {
+            next_fluid_configs: fluid.fluid_configs.clone(),
+            next_simulation_configs: fluid.simulation_configs.clone(),
+            obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::new(
+                (50, 120),
+                (127, 110),
+                fluid.simulation_configs.size,
+            ))],
+            fluid: fluid,
+            rendered_images_dir: Renderer::make_rendered_images_dir(),
+        };
+
+        result.update_obstacles();
+        result
+    }
 }
 
 impl Renderer {
@@ -63,6 +93,7 @@ impl Renderer {
         Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
+            obstacles: Vec::new(),
             fluid: fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         }
@@ -118,7 +149,7 @@ impl Renderer {
     /// Runs the fluid simulation
     pub fn simulate(&mut self, tx: Sender<i64>) {
         self.fluid = Fluid::new(self.next_fluid_configs, self.next_simulation_configs);
-        self.fluid.init();
+        self.update_obstacles();
         for i in 0..self.fluid.simulation_configs.frames {
             if self.fluid.fluid_configs.has_perlin_noise {
                 self.fluid.add_noise();
@@ -127,6 +158,14 @@ impl Renderer {
 
             self.render_density(i);
             tx.send(i).unwrap();
+        }
+    }
+
+    /// After altering the obstacles list. Refresh the fluid's configuration by using that
+    /// function.
+    pub fn update_obstacles(&mut self) {
+        for obstacle in self.obstacles.iter_mut() {
+            self.fluid.fill_obstacle(obstacle);
         }
     }
 
@@ -156,7 +195,7 @@ mod tests {
     use crate::simulation::{fluid::Fluid, renderer::Renderer};
 
     #[test]
-    fn update_initial_configs_works() {
+    fn update_initial_configs() {
         //---------- Init renderer -----------
         let fluid_configs = FluidConfigs::default();
         let simulation_configs = SimulationConfigs::default();
@@ -168,7 +207,7 @@ mod tests {
         assert_ne!(renderer.fluid.fluid_configs.diffusion, 0.4212312);
 
         //---------- Init SettingMenu -----------
-        let mut fluid_ui_setting = FluidUiSettings::default();
+        let mut fluid_ui_setting = FluidWidget::default();
 
         fluid_ui_setting.fluid_configs.diffusion = 0.4212312;
 
@@ -182,5 +221,29 @@ mod tests {
         renderer.update_initial_configs(&settings_menu.settings_menu);
 
         assert_eq!(renderer.next_fluid_configs.diffusion, 0.4212312);
+    }
+
+    use crate::simulation::fluid::ContainerWall;
+
+    #[test]
+    fn default_renderer() {
+        let renderer = Renderer::default();
+        let mut count = 0;
+        for i in renderer.fluid.cells_type {
+            if i == ContainerWall::DefaultWall {
+                count += 1;
+            }
+        }
+
+        let size = renderer.fluid.simulation_configs.size;
+        let image_parameter = size * 2 + (size - 2) * 2;
+
+        let default_obstacle = &renderer.obstacles[0].get_approximate_points();
+        // The obstacle is a rectangle with points [up_left, down_right]
+        let obstacle_width = default_obstacle[1].0 - default_obstacle[0].0;
+        let obstacle_height = default_obstacle[0].1 - default_obstacle[1].1;
+        let obstacle_area = obstacle_height * obstacle_width;
+
+        assert_eq!(obstacle_area + i64::from(image_parameter), count);
     }
 }

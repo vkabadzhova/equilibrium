@@ -1,6 +1,6 @@
-use equilibrium::app::app::App;
-use equilibrium::simulation::configs::{FluidConfigs, SimulationConfigs};
-use equilibrium::simulation::fluid::Fluid;
+use equilibrium::{app::app::App, simulation::fluid::ContainerWall};
+//use equilibrium::simulation::configs::{FluidConfigs, SimulationConfigs};
+//use equilibrium::simulation::fluid::Fluid;
 use equilibrium::simulation::renderer::Renderer;
 use simplelog::{
     ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger,
@@ -23,11 +23,15 @@ fn main() {
     ])
     .unwrap();
 
-    let fluid_configs = FluidConfigs::default();
-    let simulation_configs = SimulationConfigs::default();
+    // --------------------------------------
+    //let fluid_configs = FluidConfigs::default();
+    //let simulation_configs = SimulationConfigs::default();
 
-    let fluid = Fluid::new(fluid_configs, simulation_configs);
-    let renderer = Renderer::new(fluid);
+    //let fluid = Fluid::new(fluid_configs, simulation_configs);
+    //let renderer = Renderer::new(fluid);
+    // --------------------------------------
+
+    let renderer = Renderer::default();
 
     let app = App::new(renderer);
     let native_options = eframe::NativeOptions::default();
