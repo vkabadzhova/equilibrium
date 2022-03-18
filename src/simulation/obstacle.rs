@@ -2,7 +2,7 @@ use line_drawing::Bresenham;
 use log::debug;
 use std::collections::HashMap;
 
-use super::fluid::ContainerWall;
+use super::{configs::SimulationConfigs, fluid::ContainerWall};
 
 /// Defines every obstacle's behaviour
 pub trait Obstacle {
@@ -30,6 +30,12 @@ pub struct Rectangle {
     /// defined via compass direction. See [`ContainerWall`].
     perimeter: HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>,
     area: Vec<line_drawing::Point<i64>>,
+}
+
+impl Default for Rectangle {
+    fn default() -> Self {
+        Self::new((50, 120), (127, 110), SimulationConfigs::default().size)
+    }
 }
 
 impl Rectangle {

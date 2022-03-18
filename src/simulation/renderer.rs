@@ -64,11 +64,7 @@ impl Default for Renderer {
         let mut result = Self {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
-            obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::new(
-                (50, 120),
-                (127, 110),
-                fluid.simulation_configs.size,
-            ))],
+            obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::default())],
             fluid: fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         };
