@@ -1,8 +1,16 @@
+use super::fluid::ContainerWall;
+use crate::simulation::configs::SimulationConfigs;
 use line_drawing::Bresenham;
 use log::debug;
 use std::collections::HashMap;
 
-use super::{configs::SimulationConfigs, fluid::ContainerWall};
+/// Enum describing the various obstacles' types. This is what unifies all the widgets
+/// and is used fot storing them in collections.
+#[derive(Clone)]
+pub enum ObstaclesType {
+    /// Used for describing the [`Rectangle`] type
+    Rectangle(Rectangle),
+}
 
 /// Defines every obstacle's behaviour
 pub trait Obstacle {
@@ -30,6 +38,17 @@ pub struct Rectangle {
     /// defined via compass direction. See [`ContainerWall`].
     perimeter: HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>,
     area: Vec<line_drawing::Point<i64>>,
+}
+
+impl Clone for Rectangle {
+    fn clone(&self) -> Rectangle {
+        Rectangle {
+            up_left_point: self.up_left_point,
+            down_right_point: self.down_right_point,
+            perimeter: HashMap::new(),
+            area: Vec::new(),
+        }
+    }
 }
 
 impl Default for Rectangle {
