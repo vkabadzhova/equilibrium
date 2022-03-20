@@ -9,14 +9,14 @@ use crate::simulation::obstacle::{Obstacle, ObstaclesType, Rectangle};
 pub struct ObstacleWidget {
     enabled: bool,
     // TODO: make collection
-    tree: Tree,
+    obstacles: ObstacleLayout,
 }
 
 impl Default for ObstacleWidget {
     fn default() -> Self {
         Self {
             enabled: true,
-            tree: Tree::demo(),
+            obstacles: ObstacleLayout::default(),
         }
     }
 }
@@ -52,9 +52,9 @@ impl super::View for ObstacleWidget {
 
         ui.separator();
 
-        CollapsingHeader::new(&self.tree.name)
+        CollapsingHeader::new(&self.obstacles.name)
             .default_open(false)
-            .show(ui, |ui| self.tree.ui(ui));
+            .show(ui, |ui| self.obstacles.ui(ui));
     }
 }
 
@@ -64,6 +64,7 @@ impl ObstacleWidget {
     }
 }
 
+/*
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 struct Tree {
@@ -85,10 +86,12 @@ impl Tree {
         self.obstacle.ui(ui)
     }
 }
+*/
 
 #[derive(Clone)]
 /// The inner part of every [`Tree`]
 struct ObstacleLayout {
+    name: String,
     obstacle: ObstaclesType,
 }
 
@@ -106,6 +109,15 @@ impl ObstacleLayout {
             if approximate_points[i].1 < 0 {
                 approximate_points[i].1 = 0;
             }
+        }
+    }
+}
+
+impl Default for ObstacleLayout {
+    fn default() -> Self {
+        ObstacleLayout {
+            name: "Rectangle".to_string(),
+            obstacle: ObstaclesType::Rectangle(Rectangle::new((50, 120), (120, 110), 128)),
         }
     }
 }
