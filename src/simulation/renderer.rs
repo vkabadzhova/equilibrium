@@ -19,13 +19,14 @@ macro_rules! density_img_path {
 pub(crate) use density_img_path;
 
 use super::fluid::ContainerWall;
+use crate::app::widgets::obstacle_widget::ObstacleLayout;
 
 /// Utility for visualization and interaction with the fluid simulation.
 ///
 /// There are two ways to modify the simulation’s parameters while the simulation is
 /// going: to rerun the simulation from the beginning, or two continue it with
-/// the newly added parameters. Therefore parameters of the type `next_*_configs`
-/// are used. In the first case, they are updating the current state of the
+/// the newly added parameters. Internally, there are parameters of the type `next_*_configs`
+/// that are used. In the first case, they are updating the current state of the
 /// renderer live during the simulation (the current state is stored in the
 /// struct’s member [`fluid`](crate::simulation::renderer::Renderer::fluid)), or,
 /// otherwise, update it at the **beginning** of the new simulation (i.e.
@@ -37,12 +38,12 @@ pub struct Renderer {
     /// The fluid configurations for the next run (either the next initial configs or
     /// live change of the current (depending on the configs. See the documentation
     /// of the [`Renderer`] struct)
-    pub next_fluid_configs: FluidConfigs,
+    next_fluid_configs: FluidConfigs,
 
     /// The simulation configurations for the next run (either the next initial configs or
     /// live change of the current (depending on the configs. See the documentation
     /// of the [`Renderer`] struct)
-    pub next_simulation_configs: SimulationConfigs,
+    next_simulation_configs: SimulationConfigs,
 
     /// The directory in which the rendered images that result from the simulation
     /// are stored
@@ -51,10 +52,15 @@ pub struct Renderer {
     /// Collection of all the obstacles. To update the fluid's behaviour to correspond to the
     /// obstacles, use [`update_obstacles`].
     pub obstacles: Vec<Box<dyn Obstacle>>,
+
+    /// The obstacles for the next run (either the next initial configs or
+    /// live change of the current (depending on the configs. See the documentation
+    /// of the [`Renderer`] struct)
+    next_obstacles: Vec<Box<dyn Obstacle>>,
 }
 
-// Safety: No one besides us owns obstacle, so we can safely transfer the
-// Fluid to another thread if T can be safely transferred.
+// Safety: No one besides us owns obstacle, so we can safely transfer
+// it to another thread
 unsafe impl Send for Renderer {}
 
 impl Default for Renderer {
@@ -65,6 +71,7 @@ impl Default for Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
             obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::default())],
+            next_obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::default())],
             fluid: fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         };
@@ -90,6 +97,7 @@ impl Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
             obstacles: Vec::new(),
+            next_obstacles: Vec::new(),
             fluid: fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         }
@@ -171,11 +179,27 @@ impl Renderer {
     pub fn update_initial_configs(&mut self, settings_menu: &Vec<SettingType>) {
         for setting in settings_menu.iter() {
             match setting {
-                SettingType::Fluid(fluid_ui_config) => {
-                    self.next_fluid_configs = fluid_ui_config.fluid_configs
+                SettingType::Fluid(fluid_widget) => {
+                    self.next_fluid_configs = fluid_widget.fluid_configs;
                 }
-                SettingType::Simulation(simulation_ui_config) => {
-                    self.next_simulation_configs = simulation_ui_config.simulation_configs
+                SettingType::Simulation(simulation_widget) => {
+                    self.next_simulation_configs = simulation_widget.simulation_configs;
+                }
+                SettingType::Obstacle(obstacle_widget) => {
+                    let result: Vec<Box<dyn Obstacle>> = Vec::new();
+
+                    for i in obstacle_widget.obstacles.iter() {
+                        result.push(inner::inner!(i.obstacle).clone());
+                    }
+                    self.next_obstacles = result;
+
+                    /*
+                    self.next_obstacles = obstacle_widget
+                        .obstacles
+                        .for_each()
+                        .flat_map(|el| el.obstacle)
+                        .collect();
+                    */
                 }
                 _ => {}
             }

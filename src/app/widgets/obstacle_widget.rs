@@ -8,15 +8,16 @@ use crate::simulation::obstacle::{Obstacle, ObstaclesType, Rectangle};
 //#[derive(Copy, Clone)]
 pub struct ObstacleWidget {
     enabled: bool,
-    // TODO: make collection
-    obstacles: ObstacleLayout,
+    /// Collection of obstacle types. The elements describe each possible type (e.g. Rectangle, Circle,
+    /// etc.) and their names must be unique
+    pub obstacles: Vec<ObstacleLayout>,
 }
 
 impl Default for ObstacleWidget {
     fn default() -> Self {
         Self {
             enabled: true,
-            obstacles: ObstacleLayout::default(),
+            obstacles: vec![ObstacleLayout::default()],
         }
     }
 }
@@ -52,9 +53,11 @@ impl super::View for ObstacleWidget {
 
         ui.separator();
 
-        CollapsingHeader::new(&self.obstacles.name)
-            .default_open(false)
-            .show(ui, |ui| self.obstacles.ui(ui));
+        for obstacle in self.obstacles.iter_mut() {
+            CollapsingHeader::new(obstacle.name.clone())
+                .default_open(false)
+                .show(ui, |ui| obstacle.ui(ui));
+        }
     }
 }
 
@@ -64,35 +67,23 @@ impl ObstacleWidget {
     }
 }
 
-/*
 #[derive(Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-struct Tree {
-    name: String,
-    obstacle: ObstacleLayout,
+/// The inner part of the obstacle placement UI. This includes the number of points for every
+/// single obstacle type.
+pub struct ObstacleLayout {
+    /// The name of the obstacle type, e.g. "Circle", "Rectangle", etc.
+    pub name: String,
+    /// The obstacle per se - the data for the given obstacle
+    pub obstacle: ObstaclesType,
 }
 
-impl Tree {
-    pub fn demo() -> Self {
-        Tree {
-            name: String::from("Rectangle"),
-            obstacle: ObstacleLayout {
-                obstacle: ObstaclesType::Rectangle(Rectangle::new((50, 120), (120, 110), 128)),
-            },
+impl Default for ObstacleLayout {
+    fn default() -> Self {
+        ObstacleLayout {
+            name: "Rectangle".to_string(),
+            obstacle: ObstaclesType::Rectangle(Rectangle::new((50, 120), (120, 110), 128)),
         }
     }
-
-    pub fn ui(&mut self, ui: &mut Ui) {
-        self.obstacle.ui(ui)
-    }
-}
-*/
-
-#[derive(Clone)]
-/// The inner part of every [`Tree`]
-struct ObstacleLayout {
-    name: String,
-    obstacle: ObstaclesType,
 }
 
 impl ObstacleLayout {
@@ -109,15 +100,6 @@ impl ObstacleLayout {
             if approximate_points[i].1 < 0 {
                 approximate_points[i].1 = 0;
             }
-        }
-    }
-}
-
-impl Default for ObstacleLayout {
-    fn default() -> Self {
-        ObstacleLayout {
-            name: "Rectangle".to_string(),
-            obstacle: ObstaclesType::Rectangle(Rectangle::new((50, 120), (120, 110), 128)),
         }
     }
 }

@@ -1,3 +1,5 @@
+use inner::IntoResult;
+
 use crate::simulation::configs::SimulationConfigs;
 
 /// Defines every obstacle's behaviour
@@ -23,6 +25,17 @@ impl Obstacle for ObstaclesType {
         }
     }
 }
+
+/*
+impl<T, E> IntoResult<T, E> for ObstaclesType {
+    fn into_result(self) -> Result<dyn Obstacle, E> {
+        unimplemented!();
+        match self {
+            ObstaclesType::Rectangle(rect) => return Ok(rect),
+        };
+    }
+}
+*/
 
 /// Rectangle obstacle which is fit parallely with respect to the
 /// coordinate system. It is defined by its uppest left vertex point and
