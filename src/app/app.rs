@@ -60,11 +60,13 @@ impl App {
     }
 
     fn show_image(image_path: &str, resolution: u8, frame: &epi::Frame, ui: &mut egui::Ui) {
-        let image = image::open(image_path).unwrap().resize(
-            (ui.available_width() * (resolution as f32 / 100.0)) as u32,
-            (ui.available_height() * (resolution as f32 / 100.0)) as u32,
-            Triangle,
-        );
+        let image = image::open(image_path)
+            .expect("Couldn't open image")
+            .resize(
+                (ui.available_width() * (resolution as f32 / 100.0)) as u32,
+                (ui.available_height() * (resolution as f32 / 100.0)) as u32,
+                Triangle,
+            );
         let size = image.dimensions();
 
         let image = epi::Image::from_rgba_unmultiplied(

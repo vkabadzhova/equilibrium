@@ -139,7 +139,7 @@ impl Renderer {
 
         imgbuf
             .save(density_img_path!(self.rendered_images_dir, frame_number))
-            .unwrap();
+            .expect("Coulnt't save density image");
     }
 
     /// Runs the fluid simulation

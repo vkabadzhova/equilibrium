@@ -16,7 +16,7 @@ fn main() {
         WriteLogger::new(
             LevelFilter::Info,
             Config::default(),
-            File::create("../logs.log").unwrap(),
+            File::create("logs.log").expect("Couldn't load logger"),
         ),
     ])
     .expect("Logger failed to load");

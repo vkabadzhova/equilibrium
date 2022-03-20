@@ -150,6 +150,8 @@ impl Rectangle {
         let mut result: Vec<line_drawing::Point<i64>> = Vec::new();
         let obstacle_perimeter = self.get_perimeter();
 
+        // safety note (for unwrap): there will always be a perimeter, at least one point,
+        // otherwise there won't be an obstacle
         for west_point in obstacle_perimeter.get(&ContainerWall::West).unwrap() {
             // find the corresponding East neighbour point of the current West point of the
             // obstacle, i.e. the one with the same y, but different x and replace all
@@ -214,33 +216,6 @@ impl Obstacle for Rectangle {
 #[cfg(test)]
 mod tests {
     use crate::simulation::obstacle::Rectangle;
-
-    // fn iters_equal_anyorder<T>(mut i1: impl Iterator<Item = T>, i2: impl Iterator<Item = T>) -> bool
-    // where
-    //     T: Eq + Hash,
-    // {
-    //     let set: HashSet<T> = i2.collect();
-    //     i1.all(|x| set.contains(&x))
-    // }
-    //
-    // #[test]
-    // fn rectangle_get_perimeter_direction_works() {
-    //     let rectangle_obstacle = Rectangle::new((8, 10), (10, 8), 128);
-    //     let expected_result = HashMap::from([
-    //         (ContainerWall::West, vec![(8, 8), (8, 9), (8, 10)]),
-    //         (ContainerWall::North, vec![(8, 10), (9, 10), (10, 10)]),
-    //         (ContainerWall::East, vec![(10, 10), (10, 9), (10, 8)]),
-    //         (ContainerWall::South, vec![(8, 8), (9, 8), (10, 8)]),
-    //     ]);
-    //     let result = rectangle_obstacle.get_perimeter();
-    //     assert_eq!(result.len(), 4);
-    //     for (key, value) in expected_result {
-    //         assert!(iters_equal_anyorder(
-    //             result.get(&key).unwrap().iter(),
-    //             value.iter()
-    //         ));
-    //     }
-    // }
 
     #[test]
     #[should_panic]
