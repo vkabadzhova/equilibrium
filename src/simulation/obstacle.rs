@@ -4,6 +4,19 @@ use line_drawing::Bresenham;
 use log::debug;
 use std::collections::HashMap;
 
+/// Defines every obstacle's behaviour
+pub trait Obstacle {
+    /// Returns all countour points with their direction
+    //fn get_perimeter(&mut self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>;
+
+    /// Retrurns the all the coordinates which are part of the obstacle, including both its
+    /// parameter and inside
+    //fn get_area(&mut self) -> &Vec<line_drawing::Point<i64>>;
+
+    /// Get up left and down right point using which the obstacle is approximated.
+    fn get_approximate_points(&self) -> Vec<line_drawing::Point<i64>>;
+}
+
 /// Enum describing the various obstacles' types. This is what unifies all the widgets
 /// and is used fot storing them in collections.
 #[derive(Clone)]
@@ -12,17 +25,14 @@ pub enum ObstaclesType {
     Rectangle(Rectangle),
 }
 
-/// Defines every obstacle's behaviour
-pub trait Obstacle {
-    /// Returns all countour points with their direction
-    fn get_perimeter(&mut self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>>;
-
-    /// Retrurns the all the coordinates which are part of the obstacle, including both its
-    /// parameter and inside
-    fn get_area(&mut self) -> &Vec<line_drawing::Point<i64>>;
-
-    /// Get up left and down right point using which the obstacle is approximated.
-    fn get_approximate_points(&self) -> Vec<line_drawing::Point<i64>>;
+impl Obstacle for ObstaclesType {
+    fn get_approximate_points(&self) -> Vec<line_drawing::Point<i64>> {
+        match self {
+            ObstaclesType::Rectangle(rectangle) => {
+                vec![rectangle.up_left_point, rectangle.down_right_point]
+            }
+        }
+    }
 }
 
 /// Rectangle obstacle which is fit parallely with respect to the
@@ -146,6 +156,7 @@ impl Rectangle {
         &self.perimeter
     }
 
+    /*
     fn calculate_area(&mut self) {
         let mut result: Vec<line_drawing::Point<i64>> = Vec::new();
         let obstacle_perimeter = self.get_perimeter();
@@ -189,9 +200,11 @@ impl Rectangle {
             }
         }
     }
+    */
 }
 
 impl Obstacle for Rectangle {
+    /*
     fn get_perimeter(&mut self) -> &HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> {
         if self.perimeter.is_empty() {
             self.calculate_perimeter();
@@ -207,6 +220,7 @@ impl Obstacle for Rectangle {
 
         &self.area
     }
+    */
 
     fn get_approximate_points(&self) -> Vec<line_drawing::Point<i64>> {
         vec![self.up_left_point, self.down_right_point]

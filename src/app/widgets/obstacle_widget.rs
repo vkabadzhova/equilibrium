@@ -1,13 +1,17 @@
 use eframe::egui;
 use egui::{color::*, *};
 
-use crate::simulation::obstacle::{ObstaclesType, Rectangle};
+use crate::{
+    app,
+    simulation::obstacle::{Obstacle, ObstaclesType, Rectangle},
+};
 
 /// Shows off one example of each major type of widget.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 //#[derive(Copy, Clone)]
 pub struct ObstacleWidget {
     enabled: bool,
+    name: String,
     // TODO: make collection
     tree: Tree,
 }
@@ -16,6 +20,7 @@ impl Default for ObstacleWidget {
     fn default() -> Self {
         Self {
             enabled: true,
+            name: "Rectangle".to_string(),
             tree: Tree::demo(),
         }
     }
@@ -52,7 +57,7 @@ impl super::View for ObstacleWidget {
 
         ui.separator();
 
-        CollapsingHeader::new("Tree")
+        CollapsingHeader::new(&self.name)
             .default_open(false)
             .show(ui, |ui| self.tree.ui(ui));
     }
@@ -60,7 +65,11 @@ impl super::View for ObstacleWidget {
 
 impl ObstacleWidget {
     fn gallery_grid_contents(&mut self, ui: &mut egui::Ui) {
-        let Self { enabled, tree } = self;
+        let Self {
+            enabled,
+            name,
+            tree,
+        } = self;
     }
 }
 
@@ -83,6 +92,7 @@ impl Tree {
             name: String::from("root"),
             obstacle: ObstacleLayout {
                 obstacle: ObstaclesType::Rectangle(Rectangle::new((50, 120), (120, 110), 128)),
+                name: "Rectangle".to_string(),
             },
         }
     }
@@ -96,134 +106,25 @@ impl Tree {
 /// The inner part of every [`Tree`]
 struct ObstacleLayout {
     obstacle: ObstaclesType,
+    name: String,
 }
 
 impl ObstacleLayout {
     pub fn ui(&mut self, ui: &mut Ui, name: &str, selected_name: &mut String) {
-        ui.label("Number of frames");
-        /*
-        ui.add(egui::DragValue::new(&mut simulation_configs.frames).speed(1.0));
-        if simulation_configs.frames < 1 {
-            simulation_configs.frames = 1;
-        }
-        ui.end_row();
+        ui.label(&self.name);
 
-        ui.label("Simulation step (delta_t)")
-            .on_hover_text("delta_t");
-        ui.add(egui::DragValue::new(&mut simulation_configs.delta_t).speed(0.01));
-        if simulation_configs.delta_t < 0.0 {
-            simulation_configs.delta_t = 0.00;
-        }
-        ui.end_row();
+        let mut approximate_points = self.obstacle.get_approximate_points();
+        for i in 0..approximate_points.len() {
+            ui.label("Point: ");
+            ui.add(egui::DragValue::new(&mut approximate_points[i].0).speed(1.0));
+            ui.add(egui::DragValue::new(&mut approximate_points[i].1).speed(1.0));
+            if approximate_points[i].0 < 0 {
+                approximate_points[i].0 = 0;
+            }
 
-        ui.label("Simulation window size");
-        ui.add(egui::DragValue::new(&mut simulation_configs.size).speed(1.0));
-        if simulation_configs.size < 1 {
-            simulation_configs.size = 1;
+            if approximate_points[i].1 < 0 {
+                approximate_points[i].1 = 0;
+            }
         }
-        */
-
-        /*
-        let response = CollapsingHeader::new(name)
-            .default_open(false)
-            .selectable(true)
-            .show(ui, |ui| self.children_ui(ui, name, 1, selected_name));
-        if response.header_response.clicked() {
-            *selected_name = name.to_string();
-        }
-        response.body_returned.unwrap_or(Action::Keep)
-        */
     }
 }
-
-/*
-#[derive(Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-struct Tree(String, SubTree);
-
-impl Tree {
-    pub fn demo() -> Self {
-        Self(
-            String::from("root"),
-            SubTree(ObstaclesType::Rectangle(Rectangle::new(
-                (50, 120),
-                (120, 110),
-                128,
-            ))),
-        )
-    }
-
-    pub fn ui(&mut self, ui: &mut Ui) -> Action {
-        self.1.ui(ui, "Rectangle", &mut self.0)
-    }
-}
-
-#[derive(Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-struct SubTree(ObstaclesType);
-
-impl Default for SubTree {
-    fn default() -> Self {
-        SubTree(ObstaclesType::Rectangle(Rectangle::default()))
-    }
-}
-
-impl SubTree {
-    pub fn ui(&mut self, ui: &mut Ui, name: &str, selected_name: &mut String) -> Action {
-        let response = CollapsingHeader::new(name)
-            .default_open(false)
-            .selectable(true)
-            .show(ui, |ui| self.children_ui(ui, name, 1, selected_name));
-        if response.header_response.clicked() {
-            *selected_name = name.to_string();
-        }
-        response.body_returned.unwrap_or(Action::Keep)
-    }
-
-    fn children_ui(
-        &mut self,
-        ui: &mut Ui,
-        parent_name: &str,
-        depth: usize,
-        selected_name: &mut String,
-    ) -> Action {
-        /*
-        if depth > 0
-            && ui
-                .button(RichText::new("delete").color(Color32::RED))
-                .clicked()
-        {
-            return Action::Delete;
-        }
-        */
-
-        /*
-        if self.0 == Action::Keep {}
-        self.0 = std::mem::take(self)
-            .0
-            .into_iter()
-            .enumerate()
-            .filter_map(|(i, mut tree)| {
-                if tree.ui(
-                    ui,
-                    depth + 1,
-                    &format!("{}/{}", parent_name, i),
-                    selected_name,
-                ) == Action::Keep
-                {
-                    Some(tree)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        if ui.button("+").clicked() {
-            self.0.push(SubTree::default());
-        }
-        */
-
-        Action::Keep
-    }
-}
-*/
