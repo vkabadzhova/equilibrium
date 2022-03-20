@@ -69,7 +69,8 @@ impl super::View for SimulationWidget {
 impl SimulationWidget {
     fn gallery_grid_contents(&mut self, ui: &mut egui::Ui) {
         let Self {
-            enabled,
+            // Field not used, ignore it. Item placed for completeness.
+            enabled: _,
             simulation_configs,
         } = self;
 

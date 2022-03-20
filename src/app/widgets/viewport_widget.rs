@@ -72,7 +72,8 @@ impl super::View for ViewportWidget {
 impl ViewportWidget {
     fn gallery_grid_contents(&mut self, ui: &mut egui::Ui) {
         let Self {
-            enabled,
+            // Field not used, ignore it. Item placed for completeness.
+            enabled: _,
             image_resize_factor,
             play_simulation_speed,
         } = self;

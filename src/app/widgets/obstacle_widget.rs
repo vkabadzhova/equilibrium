@@ -1,17 +1,13 @@
 use eframe::egui;
-use egui::{color::*, *};
+use egui::*;
 
-use crate::{
-    app,
-    simulation::obstacle::{Obstacle, ObstaclesType, Rectangle},
-};
+use crate::simulation::obstacle::{Obstacle, ObstaclesType, Rectangle};
 
 /// Shows off one example of each major type of widget.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 //#[derive(Copy, Clone)]
 pub struct ObstacleWidget {
     enabled: bool,
-    name: String,
     // TODO: make collection
     tree: Tree,
 }
@@ -20,7 +16,6 @@ impl Default for ObstacleWidget {
     fn default() -> Self {
         Self {
             enabled: true,
-            name: "Rectangle".to_string(),
             tree: Tree::demo(),
         }
     }
@@ -50,33 +45,23 @@ impl super::View for ObstacleWidget {
                 .num_columns(2)
                 .spacing([40.0, 4.0])
                 .striped(true)
-                .show(ui, |ui| {
-                    self.gallery_grid_contents(ui);
+                .show(ui, |_| {
+                    self.gallery_grid_contents();
                 });
         });
 
         ui.separator();
 
-        CollapsingHeader::new(&self.name)
+        CollapsingHeader::new(&self.tree.name)
             .default_open(false)
             .show(ui, |ui| self.tree.ui(ui));
     }
 }
 
 impl ObstacleWidget {
-    fn gallery_grid_contents(&mut self, ui: &mut egui::Ui) {
-        let Self {
-            enabled,
-            name,
-            tree,
-        } = self;
+    fn gallery_grid_contents(&mut self) {
+        let Self { .. } = self;
     }
-}
-
-#[derive(Clone, Copy, PartialEq)]
-enum Action {
-    Keep,
-    Delete,
 }
 
 #[derive(Clone)]
@@ -89,16 +74,15 @@ struct Tree {
 impl Tree {
     pub fn demo() -> Self {
         Tree {
-            name: String::from("root"),
+            name: String::from("Rectangle"),
             obstacle: ObstacleLayout {
                 obstacle: ObstaclesType::Rectangle(Rectangle::new((50, 120), (120, 110), 128)),
-                name: "Rectangle".to_string(),
             },
         }
     }
 
     pub fn ui(&mut self, ui: &mut Ui) {
-        self.obstacle.ui(ui, "Rectangle", &mut self.name)
+        self.obstacle.ui(ui)
     }
 }
 
@@ -106,13 +90,10 @@ impl Tree {
 /// The inner part of every [`Tree`]
 struct ObstacleLayout {
     obstacle: ObstaclesType,
-    name: String,
 }
 
 impl ObstacleLayout {
-    pub fn ui(&mut self, ui: &mut Ui, name: &str, selected_name: &mut String) {
-        ui.label(&self.name);
-
+    pub fn ui(&mut self, ui: &mut Ui) {
         let mut approximate_points = self.obstacle.get_approximate_points();
         for i in 0..approximate_points.len() {
             ui.label("Point: ");

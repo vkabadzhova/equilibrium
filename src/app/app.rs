@@ -138,7 +138,8 @@ impl epi::App for App {
     fn update(&mut self, ctx: &egui::CtxRef, frame: &epi::Frame) {
         let Self {
             current_frame,
-            renderer,
+            // Field not used, ignore it. Item placed for completeness.
+            renderer: _,
             is_simulated,
             simulation_progress,
             signal_receiver,
