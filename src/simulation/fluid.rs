@@ -5,6 +5,8 @@ use geo::{line_string, point};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
+use super::obstacle::ObstaclesType;
+
 /// Address the direction in world-directions style
 /// similliar to: mid-point line generation algorithm, etc.
 #[derive(PartialEq, Eq, Copy, Clone, Hash, Debug)]
@@ -43,7 +45,7 @@ pub enum ContainerWall {
     NoWall,
 }
 
-/// The enum is used is created since some functions such as the [`Fluid::set_boundary()`] only
+/// The enum is used is created since some functions such as the [`Fluid::set_boundaries()`] only
 /// need a concise way to express if the line is parallel to Ox or Oy.
 #[derive(PartialEq, Eq, Copy, Clone)]
 enum Orientation {
@@ -68,12 +70,14 @@ macro_rules! idx {
 /// given by the sum of the vector in the velocities_x and velocities_y coefficients
 /// that form a part of normalized vectors, too.
 ///
-///
+/// ```text
+///              ^
 /// velocities_y |^
 ///              | \  sum of the two vectors forms a new vector: the direction of the
 ///              |  \ fluid in that exact cell
 ///              ---->
 ///            velocities_x
+/// ```
 pub struct Fluid {
     /// general configurations for the simulated fluid
     pub fluid_configs: FluidConfigs,
@@ -140,67 +144,12 @@ impl Fluid {
         self.velocities_y[idx] += amount_y;
     }
 
-    /// Reflects a cell's velocity when a wall is hit. It works as follows:
-    ///
-    /// Since the velocity vector (its direction and magnitute) are given by
-    /// the sum of the velocities_x and velocities_y coefficient, the hit to a wall
-    /// is simulated by mirroring those vectors. This happens just by changing the sign of
-    /// the given vector.
-    ///
-    /// *Note 1.:* depending on which edge the cell is next to, only the x velocity component OR
-    /// the y velocity is changed. Also note that this only works if the wall is parallel to
-    /// one of the axis of the coordinate system.
-    ///
-    /// ============== Working principle =================
-    /// A cell's velocity vector is a combination of the `velocities_x` and `velocities_y`
-    ///
-    /// velocities_y |^
-    ///              | \  sum of the two vectors forms a new vector: the direction of the
-    ///              |  \ fluid in that exact cell
-    ///              ---->
-    ///            velocities_x
-    ///
-    /// Mirroring of the vector with regards to Oy is made by replacing the x component of the
-    /// vector with its opposite number (the same value, but with the opposite sign)
-    ///
-    /// new vector which    ^|^
-    /// mirrors the        / | \  sum of the two vectors forms a new vector: the direction of the
-    /// original          /  |  \ fluid in that exact cell
-    ///                 <=====---->
-    ///                 velocities_x
-    ///
-    /// *Note 2.:* The above example is appropriate for the left wall:
-    ///  __________
-    ///  ||        |
-    ///  ||  ^     |
-    ///  || /      |
-    ///  ||/       |
-    ///  ||^       |
-    ///  || \      |
-    ///  ||  \     |
-    ///  -----------
-    ///
-    /// *Note 3.:* The corners do this mirroring for both their x and y component which results in
-    /// a vector symmetrical by both Ox and Oy.
-    ///
-    ///   mirrored vector   ^|^   (1)
-    ///   by Oy (2)        / | \  sum of the two vectors forms a new vector: the direction of the
-    ///                   /  |  \ fluid in that exact cell
-    ///                 <=====---->
-    ///                  \   |
-    ///  the resulting    \  |
-    ///  arrow which is    ^ |
-    ///  pointing the oppisite
-    ///  direction of (1)
-    ///  (ignore downward arrow's tip :))
-    ///
-    fn set_boundaries(
+    fn step_velocities(
         orientation: Orientation,
         x: &mut [f32],
         size: u32,
         cells_type: &Vec<ContainerWall>,
     ) {
-        let size = i64::from(size);
         for j in 0..=size - 1 {
             for i in 0..=size - 1 {
                 if cells_type[idx!(i, j, size)] == ContainerWall::DefaultWall {
@@ -244,19 +193,111 @@ impl Fluid {
                                 -x[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
                         }
                     }
-                    Orientation::AdjustPassive => {
-                        // NB: works only for the edges
-
-                        x[idx!(i, 0, size)] = x[idx!(i, 1, size)];
-                        x[idx!(i, size - 1, size)] = x[idx!(i, size - 2, size)];
-
-                        x[idx!(0, j, size)] = x[idx!(1, j, size)];
-                        x[idx!(size - 1, j, size)] = x[idx!(size - 2, j, size)];
-                    }
+                    _ => {}
                 }
             }
         }
+    }
 
+    /// Sets the boundaries for the densities
+    ///
+    /// NB: works only for approximated obstacles.
+    fn step_passive(x: &mut [f32], size: u32, obstacles: &Vec<ObstaclesType>) {
+        for obstacle in obstacles {}
+
+        // NB: works only for the edges
+
+        for i in 0..size {
+            x[idx!(i, 0, size)] = x[idx!(i, 1, size)];
+            x[idx!(i, size - 1, size)] = x[idx!(i, size - 2, size)];
+        }
+
+        for j in 0..size {
+            x[idx!(0, j, size)] = x[idx!(1, j, size)];
+            x[idx!(size - 1, j, size)] = x[idx!(size - 2, j, size)];
+        }
+    }
+
+    /// Reflects a cell's velocity when a wall is hit. It works as follows:
+    ///
+    /// Since the velocity vector (its direction and magnitute) are given by
+    /// the sum of the velocities_x and velocities_y coefficient, the hit to a wall
+    /// is simulated by mirroring those vectors. This happens just by changing the sign of
+    /// the given vector.
+    ///
+    /// *Note 1.:* depending on which edge the cell is next to, only the x velocity component OR
+    /// the y velocity is changed. Also note that this only works if the wall is parallel to
+    /// one of the axis of the coordinate system.
+    ///
+    /// ============== Working principle =================
+    /// A cell's velocity vector is a combination of the `velocities_x` and `velocities_y`
+    ///
+    ///```text
+    ///              ^
+    /// velocities_y |^
+    ///              | \  sum of the two vectors forms a new vector: the direction of the
+    ///              |  \ fluid in that exact cell
+    ///              ---->
+    ///            velocities_x
+    /// ```
+    ///
+    /// Mirroring of the vector with regards to Oy is made by replacing the x component of the
+    /// vector with its opposite number (the same value, but with the opposite sign)
+    ///
+    /// ```text
+    ///                      ^
+    /// new vector which    ^|^
+    /// mirrors the        / | \  sum of the two vectors forms a new vector: the direction of the
+    /// original          /  |  \ fluid in that exact cell
+    ///                 <=====---->
+    ///                 velocities_x
+    /// ```
+    /// *Note 2.:* The above example is appropriate for the left wall:
+    ///  ```text
+    ///  __________
+    ///  ||        |
+    ///  ||  ^     |
+    ///  || /      |
+    ///  ||/       |
+    ///  ||^       |
+    ///  || \      |
+    ///  ||  \     |
+    ///  -----------
+    ///```
+    /// *Note 3.:* The corners do this mirroring for both their x and y component which results in
+    /// a vector symmetrical by both Ox and Oy.
+    ///
+    /// ```text
+    ///                      ^
+    ///   mirrored vector   ^|^   (1)
+    ///   by Oy (2)        / | \  sum of the two vectors forms a new vector: the direction of the
+    ///                   /  |  \ fluid in that exact cell
+    ///                 <=====---->
+    ///                  \   |
+    ///  the resulting    \  |
+    ///  arrow which is    ^ |
+    ///  pointing the oppisite
+    ///  direction of (1)
+    ///  (ignore downward arrow's tip :))
+    /// ```
+    ///
+    fn set_boundaries(
+        orientation: Orientation,
+        x: &mut [f32],
+        size: u32,
+        cells_type: &Vec<ContainerWall>,
+        obstacles: &Vec<ObstaclesType>,
+    ) {
+        match orientation {
+            Orientation::AdjustColumn | Orientation::AdjustRow => {
+                Fluid::step_velocities(orientation, x, size, cells_type);
+            }
+            Orientation::AdjustPassive => {
+                Fluid::step_passive(x, size, obstacles);
+            }
+        }
+
+        let size = i64::from(size);
         x[idx!(0, 0, size)] = 0.5 * (x[idx!(1, 0, size)] + x[idx!(0, 1, size)]);
         x[idx!(0, size - 1, size)] =
             0.5 * (x[idx!(1, size - 1, size)] + x[idx!(0, size - 2, size)]);
@@ -275,6 +316,7 @@ impl Fluid {
         delta_t: &f32,
         frames: i64,
         cells_type: &Vec<ContainerWall>,
+        obstacles: &Vec<ObstaclesType>,
     ) {
         let size_float = (size - 2) as f32;
         let a = delta_t * diffusion * size_float * size_float;
@@ -287,6 +329,7 @@ impl Fluid {
             size,
             frames,
             cells_type,
+            obstacles,
         );
     }
 
@@ -299,6 +342,7 @@ impl Fluid {
         size: u32,
         frames: i64,
         cells_type: &Vec<ContainerWall>,
+        obstacles: &Vec<ObstaclesType>,
     ) {
         let c_recip = 1.0 / c;
         for _k in 0..frames {
@@ -312,7 +356,7 @@ impl Fluid {
                         * c_recip;
                 }
             }
-            Fluid::set_boundaries(orientation, x, size, cells_type);
+            Fluid::set_boundaries(orientation, x, size, cells_type, obstacles);
         }
     }
 
@@ -324,6 +368,7 @@ impl Fluid {
         size: u32,
         frames: i64,
         cells_type: &Vec<ContainerWall>,
+        obstacles: &Vec<ObstaclesType>,
     ) {
         for j in 1..size - 1 {
             for i in 1..size - 1 {
@@ -337,8 +382,8 @@ impl Fluid {
             }
         }
 
-        Fluid::set_boundaries(Orientation::AdjustPassive, div, size, cells_type);
-        Fluid::set_boundaries(Orientation::AdjustPassive, p, size, cells_type);
+        Fluid::set_boundaries(Orientation::AdjustPassive, div, size, cells_type, obstacles);
+        Fluid::set_boundaries(Orientation::AdjustPassive, p, size, cells_type, obstacles);
         Fluid::lin_solve(
             Orientation::AdjustPassive,
             p,
@@ -348,6 +393,7 @@ impl Fluid {
             size,
             frames,
             cells_type,
+            obstacles,
         );
 
         for j in 1..size - 1 {
@@ -359,8 +405,20 @@ impl Fluid {
             }
         }
 
-        Fluid::set_boundaries(Orientation::AdjustRow, velocities_x, size, cells_type);
-        Fluid::set_boundaries(Orientation::AdjustColumn, velocities_y, size, cells_type);
+        Fluid::set_boundaries(
+            Orientation::AdjustRow,
+            velocities_x,
+            size,
+            cells_type,
+            obstacles,
+        );
+        Fluid::set_boundaries(
+            Orientation::AdjustColumn,
+            velocities_y,
+            size,
+            cells_type,
+            obstacles,
+        );
     }
 
     fn advect(
@@ -372,6 +430,7 @@ impl Fluid {
         size: u32,
         delta_t: &f32,
         cells_type: &Vec<ContainerWall>,
+        obstacles: &Vec<ObstaclesType>,
     ) {
         let (mut i0, mut i1, mut j0, mut j1): (f32, f32, f32, f32);
 
@@ -416,13 +475,13 @@ impl Fluid {
                         + t1 * densities0[idx!(i1_int, j1_int, size)]);
             }
         }
-        Fluid::set_boundaries(orientation, densities, size, cells_type);
+        Fluid::set_boundaries(orientation, densities, size, cells_type, obstacles);
     }
 
     /// Simulates the next step of the fluid's movement.
     /// That includes applying diffusion and advection to the fluid
     /// and constraining it to not get out of the wall's boundaries
-    pub fn step(&mut self) {
+    pub fn step(&mut self, obstacles: &Vec<ObstaclesType>) {
         Fluid::diffuse(
             Orientation::AdjustRow,
             &mut self.velocities_x0,
@@ -432,6 +491,7 @@ impl Fluid {
             &self.simulation_configs.delta_t,
             self.simulation_configs.frames,
             &self.cells_type,
+            obstacles,
         );
         Fluid::diffuse(
             Orientation::AdjustColumn,
@@ -442,6 +502,7 @@ impl Fluid {
             &self.simulation_configs.delta_t,
             self.simulation_configs.frames,
             &self.cells_type,
+            obstacles,
         );
 
         Fluid::project(
@@ -452,6 +513,7 @@ impl Fluid {
             self.simulation_configs.size,
             self.simulation_configs.frames,
             &self.cells_type,
+            obstacles,
         );
 
         Fluid::advect(
@@ -463,6 +525,7 @@ impl Fluid {
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
             &self.cells_type,
+            obstacles,
         );
 
         Fluid::advect(
@@ -474,6 +537,7 @@ impl Fluid {
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
             &self.cells_type,
+            obstacles,
         );
 
         Fluid::project(
@@ -484,6 +548,7 @@ impl Fluid {
             self.simulation_configs.size,
             self.simulation_configs.frames,
             &self.cells_type,
+            obstacles,
         );
 
         Fluid::diffuse(
@@ -495,6 +560,7 @@ impl Fluid {
             &self.simulation_configs.delta_t,
             self.simulation_configs.frames,
             &self.cells_type,
+            obstacles,
         );
 
         Fluid::advect(
@@ -506,6 +572,7 @@ impl Fluid {
             self.simulation_configs.size,
             &self.simulation_configs.delta_t,
             &self.cells_type,
+            obstacles,
         );
 
         self.scratch_space = self.density.clone();
@@ -591,8 +658,8 @@ impl Fluid {
 
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
     /// NB: works as approximation to the real obstacle. By approximating a rectangle.
-    pub fn fill_obstacle(&mut self, obstacle: &mut Box<dyn Obstacle>) {
-        let points = obstacle.get_approximate_points();
+    pub fn fill_obstacle(&mut self, obstacle: &ObstaclesType) {
+        let points = (*obstacle).get_approximate_points();
 
         for x in points[0].0..points[1].0 {
             for y in points[1].1..points[0].1 {

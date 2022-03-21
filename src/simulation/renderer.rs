@@ -19,6 +19,7 @@ macro_rules! density_img_path {
 pub(crate) use density_img_path;
 
 use super::fluid::ContainerWall;
+use super::obstacle::ObstaclesType;
 
 /// Utility for visualization and interaction with the fluid simulation.
 ///
@@ -50,7 +51,7 @@ pub struct Renderer {
 
     /// Collection of all the obstacles. To update the fluid's behaviour to correspond to the
     /// obstacles, use [`update_obstacles`].
-    pub obstacles: Vec<Box<dyn Obstacle>>,
+    pub obstacles: Vec<ObstaclesType>,
 }
 
 // Safety: No one besides us owns obstacle, so we can safely transfer the
@@ -64,7 +65,9 @@ impl Default for Renderer {
         let mut result = Self {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
-            obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::default())],
+            // TODO
+            //obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::default())],
+            obstacles: Vec::new(),
             fluid: fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         };
@@ -150,7 +153,7 @@ impl Renderer {
             if self.fluid.fluid_configs.has_perlin_noise {
                 self.fluid.add_noise();
             }
-            self.fluid.step();
+            self.fluid.step(&self.obstacles);
 
             self.render_density(i);
             tx.send(i).unwrap();
@@ -160,7 +163,7 @@ impl Renderer {
     /// After altering the obstacles list. Refresh the fluid's configuration by using that
     /// function.
     pub fn update_obstacles(&mut self) {
-        for obstacle in self.obstacles.iter_mut() {
+        for obstacle in self.obstacles.iter() {
             self.fluid.fill_obstacle(obstacle);
         }
     }
@@ -188,7 +191,7 @@ mod tests {
     use crate::app::widgets::fluid_widget::FluidWidget;
     use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
     use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
-    use crate::simulation::{fluid::Fluid, renderer::Renderer};
+    use crate::simulation::{fluid::Fluid, obstacle::Obstacle, renderer::Renderer};
 
     #[test]
     fn update_initial_configs() {
