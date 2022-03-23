@@ -67,10 +67,10 @@ impl Default for Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
             // TODO
-            obstacles: vec![ObstaclesType::Rectangle(
-                crate::simulation::obstacle::Rectangle::default(),
-            )],
-            // obstacles: Renderer::make_default_walls(size),
+            //obstacles: vec![ObstaclesType::Rectangle(
+            //    crate::simulation::obstacle::Rectangle::default(),
+            //)],
+            obstacles: Renderer::make_default_walls(size),
             fluid: fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         };
@@ -109,7 +109,7 @@ impl Renderer {
             )),
             // West wall of the rendered image - (0, 0) is top left corner
             ObstaclesType::Rectangle(Rectangle::new(
-                (i64::from(size) - 3, i64::from(size) - 2),
+                (i64::from(size) - 2, i64::from(size) - 2),
                 (i64::from(size) - 1, 3),
                 size,
             )),
@@ -323,6 +323,12 @@ mod tests {
             .count();
 
         let size = i64::from(renderer.fluid.simulation_configs.size);
+
+        for i in 0..size*size {
+            if renderer.fluid.cells_type[i as usize] == ContainerWall::DefaultWall {
+                println!("idx: {}", i);
+            }
+        }
 
         // | N | N | N | N | N | N |
         // | S | S | S | S | S | S |
