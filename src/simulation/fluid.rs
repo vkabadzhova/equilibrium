@@ -152,7 +152,7 @@ impl Fluid {
     ) {
         for j in 0..=size - 1 {
             for i in 0..=size - 1 {
-                if cells_type[idx!(i, j, size)] == ContainerWall::DefaultWall {
+                if cells_type[idx!(i, j, size)] != ContainerWall::NoWall {
                     continue;
                 }
 
@@ -203,8 +203,51 @@ impl Fluid {
     ///
     /// NB: works only for approximated obstacles.
     fn step_passive(x: &mut [f32], size: u32, obstacles: &Vec<ObstaclesType>) {
-        for obstacle in obstacles {}
+        for obstacle in obstacles {
+            let walls = obstacle.get_approximate_walls();
+            for (wall_key, wall_points) in walls {
+                for point in wall_points {
+                    match wall_key {
+                        ContainerWall::North => {
+                            let down_point_coordinates = (point.0, point.1 - 1);
+                            x[idx!(point.0, point.1, i64::from(size))] = x[idx!(
+                                down_point_coordinates.0,
+                                down_point_coordinates.1,
+                                i64::from(size)
+                            )];
+                        }
+                        ContainerWall::South => {
+                            let up_point_coordinates = (point.0, point.1 + 1);
+                            x[idx!(point.0, point.1, i64::from(size))] = x[idx!(
+                                up_point_coordinates.0,
+                                up_point_coordinates.1,
+                                i64::from(size)
+                            )];
+                        }
+                        ContainerWall::West => {
+                            let left_point_coordinates = (point.0 - 1, point.1);
+                            x[idx!(point.0, point.1, i64::from(size))] = x[idx!(
+                                left_point_coordinates.0,
+                                left_point_coordinates.1,
+                                i64::from(size)
+                            )];
+                        }
+                        ContainerWall::East => {
+                            let right_point_coordinates = (point.0 + 1, point.1);
+                            x[idx!(point.0, point.1, i64::from(size))] = x[idx!(
+                                right_point_coordinates.0,
+                                right_point_coordinates.1,
+                                i64::from(size)
+                            )];
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        
 
+        /*
         // NB: works only for the edges
 
         for i in 0..size {
@@ -216,6 +259,7 @@ impl Fluid {
             x[idx!(0, j, size)] = x[idx!(1, j, size)];
             x[idx!(size - 1, j, size)] = x[idx!(size - 2, j, size)];
         }
+        */
     }
 
     /// Reflects a cell's velocity when a wall is hit. It works as follows:
@@ -600,23 +644,35 @@ impl Fluid {
         }
     }
 
-    fn init_cells_type(&mut self) {
+    // Places the borders of the picture (i.e. constrains the fluid between in the borders of the
+    // image)
+    //
+    // The labels of the walls of the picture are inverted since otherwise the algorithm will try
+    // to alter the cell based on the cells "below" the cells with y value = 0 which will result
+    // in out of boundaries panicking.
+    fn place_container_walls(&mut self) {
         for i in 0..self.simulation_configs.size {
-            self.cells_type[idx!(i, 0, self.simulation_configs.size)] = ContainerWall::DefaultWall;
+            // The walls are inverted. The most downward wall is North. See function's description.
+            self.cells_type[idx!(i, 0, self.simulation_configs.size)] = ContainerWall::North;
+
+            // The walls are inverted. The most upward wall is South. See function's description.
             self.cells_type[idx!(
                 i,
                 self.simulation_configs.size - 1,
                 self.simulation_configs.size
-            )] = ContainerWall::DefaultWall;
+            )] = ContainerWall::South;
         }
 
         for j in 0..self.simulation_configs.size {
-            self.cells_type[idx!(0, j, self.simulation_configs.size)] = ContainerWall::DefaultWall;
+            // The walls are inverted. The leftest wall is East. See function's description.
+            self.cells_type[idx!(0, j, self.simulation_configs.size)] = ContainerWall::East;
+
+            // The walls are inverted. The rightest wall is West. See function's description.
             self.cells_type[idx!(
                 self.simulation_configs.size - 1,
                 j,
                 self.simulation_configs.size
-            )] = ContainerWall::DefaultWall;
+            )] = ContainerWall::West;
         }
     }
 
@@ -653,7 +709,7 @@ impl Fluid {
     fn init(&mut self) {
         self.init_velocities();
         self.init_density();
-        self.init_cells_type();
+        self.place_container_walls();
     }
 
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
@@ -666,6 +722,22 @@ impl Fluid {
                 self.cells_type[idx!(x, y, i64::from(self.simulation_configs.size))] =
                     ContainerWall::DefaultWall;
             }
+        }
+
+        let size = i64::from(self.simulation_configs.size);
+
+        // if any value is 0
+        if points[0].0 == 0
+            || points[0].1 == 0
+            || points[1].0 == 0
+            || points[1].1 == 0
+            // if any value is size - 1
+            || points[0].0 == size - 1
+            || points[0].1 == size - 1
+            || points[1].0 == size - 1
+            || points[1].1 == size - 1
+        {
+            self.place_container_walls();
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::app::widgets::widgets_menu::SettingType;
 use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use crate::simulation::fluid::Fluid;
-use crate::simulation::obstacle::Obstacle;
+use crate::simulation::obstacle::Rectangle;
 use std::fs;
 use std::sync::mpsc::Sender;
 
@@ -62,12 +62,13 @@ impl Default for Renderer {
     /// Add default Renderer, containing an obstacle and default [`FluidConfigs`] and [`SimulationConfigs`]
     fn default() -> Self {
         let fluid = Fluid::default();
+        let size = fluid.simulation_configs.size;
         let mut result = Self {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
             // TODO
             //obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::default())],
-            obstacles: Vec::new(),
+            obstacles: Renderer::make_default_walls(size),
             fluid: fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         };
@@ -78,6 +79,29 @@ impl Default for Renderer {
 }
 
 impl Renderer {
+    fn make_default_walls(size: u32) -> Vec<ObstaclesType> {
+        vec![
+            // North wall of the rendered image - (0, 0) is top left corner
+            ObstaclesType::Rectangle(Rectangle::new((0, 1), (i64::from(size) - 1, 0), size)),
+            
+            // East wall of the rendered image - (0, 0) is top left corner
+            ObstaclesType::Rectangle(Rectangle::new((0, i64::from(size) - 1), (1, 0), size)),
+            // South wall of the rendered image - (0, 0) is top left corner
+            ObstaclesType::Rectangle(Rectangle::new(
+                (0, i64::from(size) - 1),
+                (i64::from(size) - 1, i64::from(size) - 2),
+                size,
+            )),
+            // West wall of the rendered image - (0, 0) is top left corner
+            ObstaclesType::Rectangle(Rectangle::new(
+                (i64::from(size) - 2, i64::from(size) - 1),
+                (i64::from(size) - 1, 0),
+                size,
+            )),
+            
+        ]
+    }
+
     fn make_rendered_images_dir() -> String {
         let project_root = project_root::get_project_root()
             .unwrap()
@@ -121,7 +145,7 @@ impl Renderer {
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
             let density = self.fluid.density[idx!(x, y, self.fluid.simulation_configs.size)];
             let cell_type = self.fluid.cells_type[idx!(x, y, self.fluid.simulation_configs.size)];
-            if cell_type == ContainerWall::DefaultWall {
+            if cell_type != ContainerWall::NoWall {
                 *pixel = image::Rgba([255, 0, 0, 1]);
             } else if density != 0.0 && cell_type == ContainerWall::NoWall {
                 *pixel = image::Rgba([
@@ -224,12 +248,36 @@ mod tests {
 
     use crate::simulation::fluid::ContainerWall;
 
+    /*
     #[test]
-    fn default_renderer() {
+    fn default_renderer_with_obstacle() {
         let renderer = Renderer::default();
         let mut count = 0;
         for i in renderer.fluid.cells_type {
-            if i == ContainerWall::DefaultWall {
+            if i != ContainerWall::NoWall {
+                count += 1;
+            }
+        }
+
+        let size = renderer.fluid.simulation_configs.size;
+        let image_parameter = size * 2 + (size - 2) * 2;
+
+        let default_obstacle = &renderer.obstacles[0].get_approximate_points();
+        // The obstacle is a rectangle with points [up_left, down_right]
+        let obstacle_width = default_obstacle[1].0 - default_obstacle[0].0;
+        let obstacle_height = default_obstacle[0].1 - default_obstacle[1].1;
+        let obstacle_area = obstacle_height * obstacle_width;
+
+        assert_eq!(obstacle_area + i64::from(image_parameter), count);
+    }
+    */
+
+    #[test]
+    fn default_renderer_without_obstacle() {
+        let renderer = Renderer::default();
+        let mut count = 0;
+        for i in renderer.fluid.cells_type {
+            if i != ContainerWall::NoWall {
                 count += 1;
             }
         }
