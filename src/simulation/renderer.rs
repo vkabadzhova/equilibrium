@@ -290,7 +290,7 @@ mod tests {
     fn default_renderer_walls_as_obstacle() {
         let renderer = Renderer::default();
 
-        // Count walls' types
+        // ----- Count walls by their type --------
         let north_count = renderer
             .fluid
             .cells_type
@@ -324,7 +324,13 @@ mod tests {
 
         let size = i64::from(renderer.fluid.simulation_configs.size);
 
-        // Assert correct count of the wall types
+        for i in 0..size * size {
+            if renderer.fluid.cells_type[i as usize] == ContainerWall::South {
+                println!("idx: {}", i);
+            }
+        }
+
+        // --- Assert correct count of the wall types ------
         //
         // NB: the schema is logically (and mathematically) depicted. The actual distribution is
         // flipped by the horizontal axis.
@@ -340,7 +346,7 @@ mod tests {
         assert_eq!(west_count as i64, size);
         assert_eq!(default_count as i64, 0);
 
-        // Assert correct order of the wall types
+        // ---- Assert correct order of the wall types ------
         assert_eq!(renderer.fluid.cells_type[0], ContainerWall::East);
         assert_eq!(renderer.fluid.cells_type[1], ContainerWall::North);
         assert_eq!(
@@ -348,8 +354,8 @@ mod tests {
             ContainerWall::West
         );
         assert_eq!(
-            renderer.fluid.cells_type[size as usize - 2],
-            ContainerWall::North
+            renderer.fluid.cells_type[(size * size) as usize - 3],
+            ContainerWall::South
         );
     }
 }
