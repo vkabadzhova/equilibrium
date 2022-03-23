@@ -201,7 +201,7 @@ impl Fluid {
 
     /// Sets the boundaries for the densities
     ///
-    /// NB: works only for approximated obstacles.
+    /// NB: works only for approximated obstacles yet.
     fn step_passive(x: &mut [f32], size: u32, obstacles: &Vec<ObstaclesType>) {
         for obstacle in obstacles {
             let walls = obstacle.get_approximate_walls();
@@ -245,11 +245,10 @@ impl Fluid {
                 }
             }
         }
-        
 
-        /*
         // NB: works only for the edges
 
+        /*
         for i in 0..size {
             x[idx!(i, 0, size)] = x[idx!(i, 1, size)];
             x[idx!(i, size - 1, size)] = x[idx!(i, size - 2, size)];
@@ -717,8 +716,8 @@ impl Fluid {
     pub fn fill_obstacle(&mut self, obstacle: &ObstaclesType) {
         let points = (*obstacle).get_approximate_points();
 
-        for x in points[0].0..points[1].0 {
-            for y in points[1].1..points[0].1 {
+        for x in points[0].0 + 1..=points[1].0 - 1 {
+            for y in points[1].1 + 1..points[0].1 - 1 {
                 self.cells_type[idx!(x, y, i64::from(self.simulation_configs.size))] =
                     ContainerWall::DefaultWall;
             }

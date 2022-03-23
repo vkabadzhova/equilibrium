@@ -67,8 +67,10 @@ impl Default for Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
             // TODO
-            //obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::default())],
-            obstacles: Renderer::make_default_walls(size),
+            obstacles: vec![ObstaclesType::Rectangle(
+                crate::simulation::obstacle::Rectangle::default(),
+            )],
+            // obstacles: Renderer::make_default_walls(size),
             fluid: fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         };
@@ -79,13 +81,26 @@ impl Default for Renderer {
 }
 
 impl Renderer {
+    /// Creates the default walls of the picture by the following rules:
+    /// 1. 2 rows/columns per wall;
+    /// 2. The North and the South walls take the corners.
+    ///  
+    /// ```text
+    /// Illustration of the pattern:
+    ///   |W  |E          |W  |E
+    /// | N | N | N | N | N | N | <- N
+    /// | S | S | S | S | S | S | <- S
+    /// | W | E | - | - | W | E |
+    /// | W | E | - | - | W | E |
+    /// | N | N | N | N | N | N | <- N
+    /// | S | S | S | S | S | S | <- S
+    /// ```
     fn make_default_walls(size: u32) -> Vec<ObstaclesType> {
         vec![
             // North wall of the rendered image - (0, 0) is top left corner
             ObstaclesType::Rectangle(Rectangle::new((0, 1), (i64::from(size) - 1, 0), size)),
-            
             // East wall of the rendered image - (0, 0) is top left corner
-            ObstaclesType::Rectangle(Rectangle::new((0, i64::from(size) - 1), (1, 0), size)),
+            ObstaclesType::Rectangle(Rectangle::new((0, i64::from(size) - 3), (1, 3), size)),
             // South wall of the rendered image - (0, 0) is top left corner
             ObstaclesType::Rectangle(Rectangle::new(
                 (0, i64::from(size) - 1),
@@ -94,11 +109,10 @@ impl Renderer {
             )),
             // West wall of the rendered image - (0, 0) is top left corner
             ObstaclesType::Rectangle(Rectangle::new(
-                (i64::from(size) - 2, i64::from(size) - 1),
-                (i64::from(size) - 1, 0),
+                (i64::from(size) - 3, i64::from(size) - 2),
+                (i64::from(size) - 1, 3),
                 size,
             )),
-            
         ]
     }
 
@@ -273,24 +287,54 @@ mod tests {
     */
 
     #[test]
-    fn default_renderer_without_obstacle() {
+    fn default_renderer_walls_as_obstacle() {
         let renderer = Renderer::default();
-        let mut count = 0;
-        for i in renderer.fluid.cells_type {
-            if i != ContainerWall::NoWall {
-                count += 1;
-            }
-        }
 
-        let size = renderer.fluid.simulation_configs.size;
-        let image_parameter = size * 2 + (size - 2) * 2;
+        // Count walls' types
+        let north_count = renderer
+            .fluid
+            .cells_type
+            .iter()
+            .filter(|&el| el == &ContainerWall::North)
+            .count();
+        let south_count = renderer
+            .fluid
+            .cells_type
+            .iter()
+            .filter(|&el| el == &ContainerWall::South)
+            .count();
+        let east_count = renderer
+            .fluid
+            .cells_type
+            .iter()
+            .filter(|&el| el == &ContainerWall::East)
+            .count();
+        let west_count = renderer
+            .fluid
+            .cells_type
+            .iter()
+            .filter(|&el| el == &ContainerWall::West)
+            .count();
+        let default_count = renderer
+            .fluid
+            .cells_type
+            .iter()
+            .filter(|&el| el == &ContainerWall::DefaultWall)
+            .count();
 
-        let default_obstacle = &renderer.obstacles[0].get_approximate_points();
-        // The obstacle is a rectangle with points [up_left, down_right]
-        let obstacle_width = default_obstacle[1].0 - default_obstacle[0].0;
-        let obstacle_height = default_obstacle[0].1 - default_obstacle[1].1;
-        let obstacle_area = obstacle_height * obstacle_width;
+        let size = i64::from(renderer.fluid.simulation_configs.size);
 
-        assert_eq!(obstacle_area + i64::from(image_parameter), count);
+        // | N | N | N | N | N | N |
+        // | S | S | S | S | S | S |
+        // | W | E | - | - | W | E |
+        // | W | E | - | - | W | E |
+        // | N | N | N | N | N | N |
+        // | S | S | S | S | S | S |
+        //assert_eq!(north_count as i64, size * 2);
+        //assert_eq!(south_count as i64, size * 2);
+        //assert_eq!(east_count as i64, (size - 4) * 2);
+        //assert_eq!(west_count as i64, (size - 4) * 2);
+        assert_eq!(default_count as i64, 0);
+        //*/
     }
 }

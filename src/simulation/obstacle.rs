@@ -57,8 +57,18 @@ impl Clone for Rectangle {
 }
 
 impl Default for Rectangle {
+    // Try with other default obstacles:
+    //Self::new((50, 120), (127, 110), SimulationConfigs::default().size)
+    //Self::new((10, i64::from(size - 2)), (i64::from(size - 2), 10), size)
+    //Self::new((0, i64::from(size - 1)), (10, i64::from(size - 10)), size)
+    //Self::new((0, 10), (10, 0), 128)
     fn default() -> Self {
-        Self::new((50, 120), (127, 110), SimulationConfigs::default().size)
+        let size = SimulationConfigs::default().size;
+        Self::new(
+            (i64::from(size - 50), i64::from(size - 1)),
+            (i64::from(size - 1), i64::from(size - 50)),
+            size,
+        )
     }
 }
 

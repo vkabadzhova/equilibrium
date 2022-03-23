@@ -5,7 +5,16 @@
 pub mod fluid;
 
 /// Renderes the simulation and stores the result images in the `equilibrium/rendered_images` directory
-/// (located directly under the project's root)
+/// (located directly under the project's root).
+///
+/// **Note:** The image's coordinates are from top to bottom and from left to right, i.e.,
+/// the following pattern:
+/// ```text
+/// 0,0 | 0,1 | 0,2
+/// 1,0 | 1,1 | 1,2
+/// 2,0 | 2,1 | 2,2
+///
+/// ```
 pub mod renderer;
 
 /// Various obstacles defined by a vector with their points can be put into the simulation,
