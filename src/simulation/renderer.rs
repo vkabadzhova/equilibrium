@@ -229,7 +229,7 @@ mod tests {
     use crate::app::widgets::fluid_widget::FluidWidget;
     use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
     use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
-    use crate::simulation::{fluid::Fluid, obstacle::Obstacle, renderer::Renderer};
+    use crate::simulation::{fluid::Fluid, renderer::Renderer};
 
     #[test]
     fn update_initial_configs() {
@@ -324,23 +324,32 @@ mod tests {
 
         let size = i64::from(renderer.fluid.simulation_configs.size);
 
-        for i in 0..size*size {
-            if renderer.fluid.cells_type[i as usize] == ContainerWall::DefaultWall {
-                println!("idx: {}", i);
-            }
-        }
-
-        // | N | N | N | N | N | N |
-        // | S | S | S | S | S | S |
+        // Assert correct count of the wall types
+        //
+        // NB: the schema is logically (and mathematically) depicted. The actual distribution is
+        // flipped by the horizontal axis.
+        // | W | N | N | N | N | E |
+        // | W | S | S | S | S | E |
         // | W | E | - | - | W | E |
         // | W | E | - | - | W | E |
-        // | N | N | N | N | N | N |
-        // | S | S | S | S | S | S |
-        //assert_eq!(north_count as i64, size * 2);
-        //assert_eq!(south_count as i64, size * 2);
-        //assert_eq!(east_count as i64, (size - 4) * 2);
-        //assert_eq!(west_count as i64, (size - 4) * 2);
+        // | W | N | N | N | N | E |
+        // | W | S | S | S | S | E |
+        assert_eq!(north_count as i64, size - 2);
+        assert_eq!(south_count as i64, size - 2);
+        assert_eq!(east_count as i64, size);
+        assert_eq!(west_count as i64, size);
         assert_eq!(default_count as i64, 0);
-        //*/
+
+        // Assert correct order of the wall types
+        assert_eq!(renderer.fluid.cells_type[0], ContainerWall::East);
+        assert_eq!(renderer.fluid.cells_type[1], ContainerWall::North);
+        assert_eq!(
+            renderer.fluid.cells_type[size as usize - 1],
+            ContainerWall::West
+        );
+        assert_eq!(
+            renderer.fluid.cells_type[size as usize - 2],
+            ContainerWall::North
+        );
     }
 }
