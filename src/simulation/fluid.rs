@@ -689,6 +689,14 @@ impl Fluid {
                     ContainerWall::DefaultWall;
             }
         }
+
+        let walls = (*obstacle).get_approximate_walls();
+        for (key, points) in walls {
+            for point in points {
+                self.cells_type[idx!(point.0, point.1, i64::from(self.simulation_configs.size))] =
+                    key;
+            }
+        }
     }
 }
 

@@ -117,20 +117,12 @@ impl Obstacle for Rectangle {
         let points = self.get_approximate_points();
 
         let mut result: HashMap<ContainerWall, Vec<line_drawing::Point<i64>>> = HashMap::new();
+
         // The upper wall of the approximated obstacle is defined by upper_left_point.x, upper_left_point.y --> down_right_point.x, upper_left_point.y
         let upper_wall = ((points[0].0, points[0].1), (points[1].0, points[0].1));
         result.insert(
             ContainerWall::North,
             Bresenham::new(upper_wall.0, upper_wall.1)
-                .into_iter()
-                .collect(),
-        );
-
-        // The left wall of the approximated obstacle is defined by upper_left_point.x, upper_left_point.y --> upper_left_point.x, down_right_point.y
-        let left_wall = ((points[0].0, points[0].1), (points[0].0, points[1].1));
-        result.insert(
-            ContainerWall::West,
-            Bresenham::new(left_wall.0, left_wall.1)
                 .into_iter()
                 .collect(),
         );
@@ -144,14 +136,23 @@ impl Obstacle for Rectangle {
                 .collect(),
         );
 
-        // The right wall of the approximated obstacle is defined by down_right_point.x, upper_left_point.y --> down_right_point.x, down_right_point.y
-        let right_wall = ((points[1].0, points[0].1), (points[1].0, points[1].1));
-        result.insert(
-            ContainerWall::East,
-            Bresenham::new(right_wall.0, right_wall.1)
-                .into_iter()
-                .collect(),
-        );
+         // The left wall of the approximated obstacle is defined by upper_left_point.x, upper_left_point.y --> upper_left_point.x, down_right_point.y
+         let left_wall = ((points[0].0, points[0].1), (points[0].0, points[1].1));
+         result.insert(
+             ContainerWall::West,
+             Bresenham::new(left_wall.0, left_wall.1)
+                 .into_iter()
+                 .collect(),
+         );
+ 
+         // The right wall of the approximated obstacle is defined by down_right_point.x, upper_left_point.y --> down_right_point.x, down_right_point.y
+         let right_wall = ((points[1].0, points[0].1), (points[1].0, points[1].1));
+         result.insert(
+             ContainerWall::East,
+             Bresenham::new(right_wall.0, right_wall.1)
+                 .into_iter()
+                 .collect(),
+         );
 
         result
     }
