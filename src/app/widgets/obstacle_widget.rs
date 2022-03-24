@@ -117,7 +117,7 @@ impl Default for ObstacleLayout {
     fn default() -> Self {
         ObstacleLayout {
             name: "Rectangle".to_string(),
-            obstacle: ObstaclesType::Rectangle(Rectangle::new((50, 120), (120, 110), 128)),
+            obstacle: ObstaclesType::Rectangle(Rectangle::default()),
         }
     }
 }
