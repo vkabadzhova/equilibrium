@@ -84,33 +84,39 @@ impl Renderer {
     /// Creates the default walls of the picture by the following rules:
     /// 1. 2 rows/columns per wall;
     /// 2. The North and the South walls take the corners.
+    ///
+    /// *NB: * Corners are additionally manipulated, and they contain one of the values of
+    /// intersection. We cannot know exactly which one since while they are processed, a HashMap is
+    /// used, and they are overwritten in undefined order. However, the unknowness of the value
+    /// applies only for the inside corners, since the obstacles are desinged such that an obstacle
+    /// overlaps with just a single row of the other.
     ///  
     /// ```text
     /// Illustration of the pattern:
     ///   |W  |E          |W  |E
     /// | N | N | N | N | N | N | <- N
-    /// | S | S | S | S | S | S | <- S
+    /// | ? | ? | S | S | ? | ? | <- S
     /// | W | E | - | - | W | E |
     /// | W | E | - | - | W | E |
-    /// | N | N | N | N | N | N | <- N
+    /// | ? | ? | N | N | ? | ? | <- N
     /// | S | S | S | S | S | S | <- S
     /// ```
     fn make_default_walls(size: u32) -> Vec<ObstaclesType> {
         vec![
+            // left in Cartesian coordinate system
+            ObstaclesType::Rectangle(Rectangle::new((0, 1), (1, i64::from(size) - 2), size)),
+            // right in Cartesian coordinate system
+            ObstaclesType::Rectangle(Rectangle::new(
+                (i64::from(size) - 2, 1),
+                (i64::from(size) - 1, i64::from(size) - 2),
+                size,
+            )),
             // down in Cartesian coordinate system
             ObstaclesType::Rectangle(Rectangle::new((0, 0), (i64::from(size) - 1, 1), size)),
             // up in Cartesian coordinate system
             ObstaclesType::Rectangle(Rectangle::new(
                 (0, i64::from(size) - 2),
                 (i64::from(size) - 1, i64::from(size) - 1),
-                size,
-            )),
-            // left in Cartesian coordinate system
-            ObstaclesType::Rectangle(Rectangle::new((0, 2), (1, i64::from(size) - 3), size)),
-            // right in Cartesian coordinate system
-            ObstaclesType::Rectangle(Rectangle::new(
-                (i64::from(size) - 2, 2),
-                (i64::from(size) - 1, i64::from(size) - 3),
                 size,
             )),
         ]
@@ -300,33 +306,43 @@ mod tests {
             .count();
 
         let size = i64::from(renderer.fluid.simulation_configs.size);
+        let size_middle = size / 2;
 
         // --- Assert correct count of the wall types ------
         //
         // NB: the schema is logically (and mathematically) depicted. The actual distribution is
         // flipped by the horizontal axis.
         // | W | N | N | N | N | E |
-        // | W | S | S | S | S | E |
+        // | ? | ? | S | S | ? | ? |
         // | W | E | - | - | W | E |
         // | W | E | - | - | W | E |
-        // | W | N | N | N | N | E |
+        // | ? | ? | N | N | ? | ? |
         // | W | S | S | S | S | E |
-        // assert_eq!(north_count as i64, size - 2);
-        // assert_eq!(south_count as i64, size - 2);
-        // assert_eq!(east_count as i64, size);
-        // assert_eq!(west_count as i64, size);
         assert_eq!(default_count as i64, 0);
+        assert_eq!(
+            (north_count + south_count + east_count + west_count) as i64,
+            4 * (size - 1) + 4 * (size - 2 - 1)
+        );
 
         // ---- Assert correct order of the wall types ------
-        // assert_eq!(renderer.fluid.cells_type[0], ContainerWall::South);
-        // assert_eq!(renderer.fluid.cells_type[1], ContainerWall::West);
-        // assert_eq!(
-        //     renderer.fluid.cells_type[size as usize - 1],
-        //     ContainerWall::North
-        // );
-        // assert_eq!(
-        //     renderer.fluid.cells_type[(size * size) as usize - 3],
-        //     ContainerWall::West
-        // );
+        // We do this by taking an arbitary point in the middle of the wall. Corners are undefined
+        // but they also does not matter, since they are processed otherwise. The verification is
+        // done for the inner wall edges since they are the one of importance.
+        assert_eq!(
+            renderer.fluid.cells_type[idx!(size_middle, 1, size)],
+            ContainerWall::North
+        );
+        assert_eq!(
+            renderer.fluid.cells_type[idx!(size - 2, size_middle, size)],
+            ContainerWall::West
+        );
+        assert_eq!(
+            renderer.fluid.cells_type[idx!(size_middle, size - 2, size)],
+            ContainerWall::South
+        );
+        assert_eq!(
+            renderer.fluid.cells_type[idx!(1, size_middle, size)],
+            ContainerWall::East
+        );
     }
 }
