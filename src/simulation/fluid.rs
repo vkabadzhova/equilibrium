@@ -643,38 +643,6 @@ impl Fluid {
         }
     }
 
-    // Places the borders of the picture (i.e. constrains the fluid between in the borders of the
-    // image)
-    //
-    // The labels of the walls of the picture are inverted since otherwise the algorithm will try
-    // to alter the cell based on the cells "below" the cells with y value = 0 which will result
-    // in out of boundaries panicking.
-    fn place_container_walls(&mut self) {
-        for i in 0..self.simulation_configs.size {
-            // The walls are inverted. The most downward wall is North. See function's description.
-            self.cells_type[idx!(i, 0, self.simulation_configs.size)] = ContainerWall::North;
-
-            // The walls are inverted. The most upward wall is South. See function's description.
-            self.cells_type[idx!(
-                i,
-                self.simulation_configs.size - 1,
-                self.simulation_configs.size
-            )] = ContainerWall::South;
-        }
-
-        for j in 0..self.simulation_configs.size {
-            // The walls are inverted. The leftest wall is East. See function's description.
-            self.cells_type[idx!(0, j, self.simulation_configs.size)] = ContainerWall::East;
-
-            // The walls are inverted. The rightest wall is West. See function's description.
-            self.cells_type[idx!(
-                self.simulation_configs.size - 1,
-                j,
-                self.simulation_configs.size
-            )] = ContainerWall::West;
-        }
-    }
-
     /// Applies random force (noise) to the fluid to make the fluid run
     /// more attractively when there's no specific purpose yet of the
     /// simulation yet.
@@ -708,11 +676,10 @@ impl Fluid {
     fn init(&mut self) {
         self.init_velocities();
         self.init_density();
-        self.place_container_walls();
     }
 
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
-    /// NB: works as approximation to the real obstacle. By approximating a rectangle.
+    /// NB: works as approximation to the real obstacle (the approximation is a rectangle)
     pub fn fill_obstacle(&mut self, obstacle: &ObstaclesType) {
         let points = (*obstacle).get_approximate_points();
 
@@ -721,22 +688,6 @@ impl Fluid {
                 self.cells_type[idx!(x, y, i64::from(self.simulation_configs.size))] =
                     ContainerWall::DefaultWall;
             }
-        }
-
-        let size = i64::from(self.simulation_configs.size);
-
-        // if any value is 0
-        if points[0].0 == 0
-            || points[0].1 == 0
-            || points[1].0 == 0
-            || points[1].1 == 0
-            // if any value is size - 1
-            || points[0].0 == size - 1
-            || points[0].1 == size - 1
-            || points[1].0 == size - 1
-            || points[1].1 == size - 1
-        {
-            self.place_container_walls();
         }
     }
 }

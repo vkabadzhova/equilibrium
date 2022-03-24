@@ -118,9 +118,9 @@ impl Renderer {
 
     fn make_rendered_images_dir() -> String {
         let project_root = project_root::get_project_root()
-            .unwrap()
+            .expect("couldn't get project's root")
             .to_str()
-            .unwrap()
+            .expect("couldn't convert project's root to string")
             .to_string();
         project_root + "/rendered_images"
     }
@@ -194,13 +194,16 @@ impl Renderer {
             self.fluid.step(&self.obstacles);
 
             self.render_density(i);
-            tx.send(i).unwrap();
+            tx.send(i)
+                .expect("couln't send singal for rendered image to App's thread");
         }
     }
 
     /// After altering the obstacles list. Refresh the fluid's configuration by using that
     /// function.
     pub fn update_obstacles(&mut self) {
+        // TODO: remove
+        // Renderer::make_default_walls(self.fluid.simulation_configs.size);
         for obstacle in self.obstacles.iter() {
             self.fluid.fill_obstacle(obstacle);
         }
@@ -323,12 +326,6 @@ mod tests {
             .count();
 
         let size = i64::from(renderer.fluid.simulation_configs.size);
-
-        for i in 0..size * size {
-            if renderer.fluid.cells_type[i as usize] == ContainerWall::South {
-                println!("idx: {}", i);
-            }
-        }
 
         // --- Assert correct count of the wall types ------
         //

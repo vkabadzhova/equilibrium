@@ -87,12 +87,15 @@ impl App {
                 renderer.simulate(tx);
             });
         })
-        .unwrap();
+        .expect("couldn't send Renderer from App to a new thread properly");
         rx
     }
 
     fn render_next_received_img(&mut self, frame: &epi::Frame, ui: &mut egui::Ui) {
-        let current_frame = self.signal_receiver.try_recv().unwrap();
+        let current_frame = self
+            .signal_receiver
+            .try_recv()
+            .expect("coulndn't receive signal from renderer while rendering");
         self.simulation_progress += 1.0 / self.renderer.fluid.simulation_configs.frames as f32;
         if current_frame > self.current_frame {
             App::show_image(
