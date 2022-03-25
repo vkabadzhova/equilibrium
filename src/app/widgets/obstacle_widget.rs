@@ -87,6 +87,7 @@ impl Default for ObstacleLayout {
 }
 
 impl ObstacleLayout {
+    /// Creates the layout for a single obstacle type
     pub fn ui(&mut self, ui: &mut Ui) {
         let mut approximate_points = self.obstacle.get_approximate_points();
         for i in 0..approximate_points.len() {

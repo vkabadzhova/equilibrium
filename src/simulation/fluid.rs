@@ -5,6 +5,8 @@ use geo::{line_string, point};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
+use super::obstacle::ObstaclesType;
+
 /// Address the direction in world-directions style
 /// similliar to: mid-point line generation algorithm, etc.
 #[derive(PartialEq, Eq, Copy, Clone, Hash, Debug)]
@@ -591,7 +593,7 @@ impl Fluid {
 
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
     /// NB: works as approximation to the real obstacle. By approximating a rectangle.
-    pub fn fill_obstacle(&mut self, obstacle: &mut Box<dyn Obstacle>) {
+    pub fn fill_obstacle(&mut self, obstacle: &ObstaclesType) {
         let points = obstacle.get_approximate_points();
 
         for x in points[0].0..points[1].0 {

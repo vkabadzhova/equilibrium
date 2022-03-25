@@ -1,5 +1,3 @@
-use inner::IntoResult;
-
 use crate::simulation::configs::SimulationConfigs;
 
 /// Defines every obstacle's behaviour
@@ -10,7 +8,7 @@ pub trait Obstacle {
 
 /// Enum describing the various obstacles' types. This is what unifies all the widgets
 /// and is used fot storing them in collections.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum ObstaclesType {
     /// Used for describing the [`Rectangle`] type
     Rectangle(Rectangle),
@@ -26,21 +24,11 @@ impl Obstacle for ObstaclesType {
     }
 }
 
-/*
-impl<T, E> IntoResult<T, E> for ObstaclesType {
-    fn into_result(self) -> Result<dyn Obstacle, E> {
-        unimplemented!();
-        match self {
-            ObstaclesType::Rectangle(rect) => return Ok(rect),
-        };
-    }
-}
-*/
-
 /// Rectangle obstacle which is fit parallely with respect to the
 /// coordinate system. It is defined by its uppest left vertex point and
 /// the most down right vertex point. **_Note:_** It is currently designed for parallel
 /// obstacles only
+#[derive(Copy)]
 pub struct Rectangle {
     /// uppest left vertex point. See [`Rectangle`]'s description
     pub up_left_point: line_drawing::Point<i64>,

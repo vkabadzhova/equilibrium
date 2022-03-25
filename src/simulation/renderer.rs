@@ -1,7 +1,8 @@
+use super::fluid::ContainerWall;
+use super::obstacle::ObstaclesType;
 use crate::app::widgets::widgets_menu::SettingType;
 use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use crate::simulation::fluid::Fluid;
-use crate::simulation::obstacle::Obstacle;
 use std::fs;
 use std::sync::mpsc::Sender;
 
@@ -17,9 +18,6 @@ macro_rules! density_img_path {
 }
 
 pub(crate) use density_img_path;
-
-use super::fluid::ContainerWall;
-use crate::app::widgets::obstacle_widget::ObstacleLayout;
 
 /// Utility for visualization and interaction with the fluid simulation.
 ///
@@ -51,12 +49,12 @@ pub struct Renderer {
 
     /// Collection of all the obstacles. To update the fluid's behaviour to correspond to the
     /// obstacles, use [`update_obstacles`].
-    pub obstacles: Vec<Box<dyn Obstacle>>,
+    pub obstacles: Vec<ObstaclesType>,
 
     /// The obstacles for the next run (either the next initial configs or
     /// live change of the current (depending on the configs. See the documentation
     /// of the [`Renderer`] struct)
-    next_obstacles: Vec<Box<dyn Obstacle>>,
+    next_obstacles: Vec<ObstaclesType>,
 }
 
 // Safety: No one besides us owns obstacle, so we can safely transfer
@@ -70,8 +68,12 @@ impl Default for Renderer {
         let mut result = Self {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
-            obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::default())],
-            next_obstacles: vec![Box::new(crate::simulation::obstacle::Rectangle::default())],
+            obstacles: vec![ObstaclesType::Rectangle(
+                crate::simulation::obstacle::Rectangle::default(),
+            )],
+            next_obstacles: vec![ObstaclesType::Rectangle(
+                crate::simulation::obstacle::Rectangle::default(),
+            )],
             fluid: fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         };
@@ -168,7 +170,7 @@ impl Renderer {
     /// After altering the obstacles list. Refresh the fluid's configuration by using that
     /// function.
     pub fn update_obstacles(&mut self) {
-        for obstacle in self.obstacles.iter_mut() {
+        for obstacle in self.obstacles.iter() {
             self.fluid.fill_obstacle(obstacle);
         }
     }
@@ -186,20 +188,11 @@ impl Renderer {
                     self.next_simulation_configs = simulation_widget.simulation_configs;
                 }
                 SettingType::Obstacle(obstacle_widget) => {
-                    let result: Vec<Box<dyn Obstacle>> = Vec::new();
-
-                    for i in obstacle_widget.obstacles.iter() {
-                        result.push(inner::inner!(i.obstacle).clone());
-                    }
-                    self.next_obstacles = result;
-
-                    /*
                     self.next_obstacles = obstacle_widget
                         .obstacles
-                        .for_each()
-                        .flat_map(|el| el.obstacle)
+                        .iter()
+                        .map(|el| el.obstacle)
                         .collect();
-                    */
                 }
                 _ => {}
             }
