@@ -87,7 +87,7 @@ impl Renderer {
     ///
     /// *NB: * Corners are additionally manipulated, and they contain one of the values of
     /// intersection. We cannot know exactly which one since while they are processed, a HashMap is
-    /// used, and they are overwritten in undefined order. However, the unknowness of the value
+    /// used, and they are overwritten in an undefined order. However, the unknowness of the value
     /// applies only for the inside corners, since the obstacles are desinged such that an obstacle
     /// overlaps with just a single row of the other.
     ///  

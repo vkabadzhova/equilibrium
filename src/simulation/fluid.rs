@@ -202,47 +202,33 @@ impl Fluid {
     /// Sets the boundaries for the densities
     ///
     /// NB: works only for approximated obstacles yet.
-    fn step_passive(x: &mut [f32], size: u32, obstacles: &Vec<ObstaclesType>) {
+    fn step_density(x: &mut [f32], size: u32, obstacles: &Vec<ObstaclesType>) {
         for obstacle in obstacles {
             let walls = obstacle.get_approximate_walls();
 
             for (wall_key, wall_points) in walls {
+                // Default value for referance_point. It will never be used since every
+                // approximated obstacle's wall is always North, South, West or East
+                let mut referance_point: (i64, i64) = (0, 0);
                 for point in wall_points {
                     match wall_key {
                         ContainerWall::North => {
-                            let down_point_coordinates = (point.0, point.1 - 1);
-                            x[idx!(point.0, point.1, i64::from(size))] = x[idx!(
-                                down_point_coordinates.0,
-                                down_point_coordinates.1,
-                                i64::from(size)
-                            )];
+                            let _down_point_coordinates = referance_point = (point.0, point.1 - 1);
                         }
                         ContainerWall::South => {
-                            let up_point_coordinates = (point.0, point.1 + 1);
-                            x[idx!(point.0, point.1, i64::from(size))] = x[idx!(
-                                up_point_coordinates.0,
-                                up_point_coordinates.1,
-                                i64::from(size)
-                            )];
+                            let _up_point_coordinates = referance_point = (point.0, point.1 + 1);
                         }
                         ContainerWall::West => {
-                            let left_point_coordinates = (point.0 - 1, point.1);
-                            x[idx!(point.0, point.1, i64::from(size))] = x[idx!(
-                                left_point_coordinates.0,
-                                left_point_coordinates.1,
-                                i64::from(size)
-                            )];
+                            let _left_point_coordinates = referance_point = (point.0 - 1, point.1);
                         }
                         ContainerWall::East => {
-                            let right_point_coordinates = (point.0 + 1, point.1);
-                            x[idx!(point.0, point.1, i64::from(size))] = x[idx!(
-                                right_point_coordinates.0,
-                                right_point_coordinates.1,
-                                i64::from(size)
-                            )];
+                            let _right_point_coordinates = referance_point = (point.0 + 1, point.1);
                         }
                         _ => {}
                     }
+
+                    x[idx!(point.0, point.1, i64::from(size))] =
+                        x[idx!(referance_point.0, referance_point.1, i64::from(size))];
                 }
             }
         }
@@ -337,10 +323,11 @@ impl Fluid {
                 Fluid::step_velocities(orientation, x, size, cells_type);
             }
             Orientation::AdjustPassive => {
-                Fluid::step_passive(x, size, obstacles);
+                Fluid::step_density(x, size, obstacles);
             }
         }
 
+        // Process the picture's corners
         let size = i64::from(size);
         x[idx!(0, 0, size)] = 0.5 * (x[idx!(1, 0, size)] + x[idx!(0, 1, size)]);
         x[idx!(0, size - 1, size)] =
