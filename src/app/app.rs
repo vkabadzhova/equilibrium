@@ -151,15 +151,7 @@ impl epi::App for App {
             .update_initial_configs(&settings_menu.settings_menu);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            global_dark_light_mode_switch(ui);
-
-            egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Exit").clicked() {
-                        frame.quit();
-                    }
-                });
-            });
+            Self::bar_content(ui, frame);
         });
 
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
@@ -282,6 +274,22 @@ impl epi::App for App {
                 ui.label("You would normally chose either panels OR windows.");
             });
         }
+    }
+}
+
+impl App {
+    fn bar_content(ui: &mut egui::Ui, frame: &epi::Frame) {
+        ui.horizontal_wrapped(|ui| {
+            global_dark_light_mode_switch(ui);
+
+            egui::menu::bar(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Exit").clicked() {
+                        frame.quit();
+                    }
+                });
+            });
+        });
     }
 }
 
