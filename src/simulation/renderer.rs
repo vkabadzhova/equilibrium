@@ -78,7 +78,7 @@ impl Default for Renderer {
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         };
 
-        result.update_obstacles();
+        result.mark_fluid_obstacles();
         result
     }
 }
@@ -155,7 +155,8 @@ impl Renderer {
     /// Runs the fluid simulation
     pub fn simulate(&mut self, tx: Sender<i64>) {
         self.fluid = Fluid::new(self.next_fluid_configs, self.next_simulation_configs);
-        self.update_obstacles();
+        self.obstacles = self.next_obstacles.clone();
+        self.mark_fluid_obstacles();
         for i in 0..self.fluid.simulation_configs.frames {
             if self.fluid.fluid_configs.has_perlin_noise {
                 self.fluid.add_noise();
@@ -167,9 +168,9 @@ impl Renderer {
         }
     }
 
-    /// After altering the obstacles list. Refresh the fluid's configuration by using that
-    /// function.
-    pub fn update_obstacles(&mut self) {
+    /// After altering the obstacles list. Refresh the fluid's configuration regarding its
+    /// obstacles.
+    pub fn mark_fluid_obstacles(&mut self) {
         for obstacle in self.obstacles.iter_mut() {
             self.fluid.fill_obstacle(obstacle);
         }
@@ -239,25 +240,48 @@ mod tests {
 
     use crate::simulation::fluid::ContainerWall;
 
+    fn calc_height<T>(a: (T, T), b: (T, T)) -> T::Output
+    where
+        T: std::ops::Sub,
+    {
+        b.0 - a.0
+    }
+
+    fn calc_width<T>(a: (T, T), b: (T, T)) -> T::Output
+    where
+        T: std::ops::Sub,
+    {
+        b.0 - a.0
+    }
+
     #[test]
     fn default_renderer() {
         let renderer = Renderer::default();
-        let mut count = 0;
-        for i in renderer.fluid.cells_type {
-            if i == ContainerWall::DefaultWall {
-                count += 1;
-            }
-        }
+        let default_walls_real_count = renderer
+            .fluid
+            .cells_type
+            .iter()
+            .filter(|&el| el == &ContainerWall::DefaultWall)
+            .count();
 
         let size = renderer.fluid.simulation_configs.size;
-        let image_parameter = size * 2 + (size - 2) * 2;
+        let image_parameter = 2 * (size + (size - 2));
 
-        let default_obstacle = &renderer.obstacles[0].get_approximate_points();
-        // The obstacle is a rectangle with points [up_left, down_right]
-        let obstacle_width = default_obstacle[1].0 - default_obstacle[0].0;
-        let obstacle_height = default_obstacle[0].1 - default_obstacle[1].1;
-        let obstacle_area = obstacle_height * obstacle_width;
+        // Sums up the area of all obstacles. NB: Assumes all obstacles are rectangles
+        let obstacles_area = renderer.obstacles.iter().fold(0, |acc, x| {
+            acc + calc_width(
+                x.clone().get_approximate_points()[0],
+                x.clone().get_approximate_points()[1],
+            ) * calc_height(
+                x.clone().get_approximate_points()[0],
+                x.clone().get_approximate_points()[1],
+            )
+        });
 
-        assert_eq!(obstacle_area + i64::from(image_parameter), count);
+        // NB: We explicitly know how that the obstacle does not overlap with the perimeter.
+        let expected_count = obstacles_area + i64::from(image_parameter);
+
+        // Safety note: Default wall size is way smaller than usize.
+        assert_eq!(default_walls_real_count, expected_count as usize);
     }
 }

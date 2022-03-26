@@ -49,7 +49,7 @@ impl Default for Rectangle {
         let size = SimulationConfigs::default().size;
         Self::new(
             (i64::from(size - 10), i64::from(size - 10)),
-            (i64::from(size - 1), i64::from(size - 1)),
+            (i64::from(size - 2), i64::from(size - 2)),
             size,
         )
     }
