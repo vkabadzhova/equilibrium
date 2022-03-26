@@ -68,8 +68,11 @@ impl super::View for ObstacleWidget {
                     self.obstacles.len() + 1
                 ),
                 obstacle: default_obstacle_layout.obstacle,
+                action: default_obstacle_layout.action,
             });
         }
+
+        self.obstacles.retain(|el| el.action == Action::Keep);
     }
 }
 
@@ -77,6 +80,15 @@ impl ObstacleWidget {
     fn gallery_grid_contents(&mut self) {
         let Self { .. } = self;
     }
+}
+
+/// Describes if an element should be deleted or kept alive in the next frame.
+#[derive(Clone, PartialEq)]
+pub enum Action {
+    /// The element should be kept available
+    Keep,
+    /// The element should be deleted
+    Delete,
 }
 
 #[derive(Clone)]
@@ -87,6 +99,8 @@ pub struct ObstacleLayout {
     pub name: String,
     /// The obstacle per se - the data for the given obstacle
     pub obstacle: ObstaclesType,
+    /// When marked as [`Action::Delete`], the obstacle is deleted in the next frame.
+    pub action: Action,
 }
 
 impl Default for ObstacleLayout {
@@ -94,6 +108,7 @@ impl Default for ObstacleLayout {
         ObstacleLayout {
             name: "Rectangle".to_string(),
             obstacle: ObstaclesType::Rectangle(Rectangle::default()),
+            action: Action::Keep,
         }
     }
 }
@@ -101,6 +116,10 @@ impl Default for ObstacleLayout {
 impl ObstacleLayout {
     /// Creates the layout for a single obstacle type
     pub fn ui(&mut self, ui: &mut Ui) {
+        if ui.button("delete").clicked() {
+            self.action = Action::Delete;
+        }
+
         let approximate_points = self.obstacle.get_approximate_points();
         for i in 0..approximate_points.len() {
             ui.label("Point: ");
