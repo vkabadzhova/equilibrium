@@ -11,6 +11,7 @@ pub struct ObstacleWidget {
     /// Collection of obstacle types. The elements describe each possible type (e.g. Rectangle, Circle,
     /// etc.) and their names must be unique
     pub obstacles: Vec<ObstacleLayout>,
+    last_obstacle_id: u32,
 }
 
 impl Default for ObstacleWidget {
@@ -18,6 +19,7 @@ impl Default for ObstacleWidget {
         Self {
             enabled: true,
             obstacles: vec![ObstacleLayout::default()],
+            last_obstacle_id: 0,
         }
     }
 }
@@ -60,16 +62,7 @@ impl super::View for ObstacleWidget {
         }
 
         if ui.button("+").clicked() {
-            let default_obstacle_layout = ObstacleLayout::default();
-            self.obstacles.push(ObstacleLayout {
-                name: format!(
-                    "{}/{}",
-                    default_obstacle_layout.name,
-                    self.obstacles.len() + 1
-                ),
-                obstacle: default_obstacle_layout.obstacle,
-                action: default_obstacle_layout.action,
-            });
+            self.add_obstacle();
         }
 
         self.obstacles.retain(|el| el.action == Action::Keep);
@@ -79,6 +72,18 @@ impl super::View for ObstacleWidget {
 impl ObstacleWidget {
     fn gallery_grid_contents(&mut self) {
         let Self { .. } = self;
+    }
+
+    fn add_obstacle(&mut self) {
+        let default_obstacle_layout = ObstacleLayout::default();
+
+        self.last_obstacle_id += 1;
+
+        self.obstacles.push(ObstacleLayout {
+            name: format!("{}/{}", default_obstacle_layout.name, self.last_obstacle_id),
+            obstacle: default_obstacle_layout.obstacle,
+            action: default_obstacle_layout.action,
+        });
     }
 }
 
@@ -116,7 +121,10 @@ impl Default for ObstacleLayout {
 impl ObstacleLayout {
     /// Creates the layout for a single obstacle type
     pub fn ui(&mut self, ui: &mut Ui) {
-        if ui.button("delete").clicked() {
+        if ui
+            .button(RichText::new("delete").color(Color32::RED))
+            .clicked()
+        {
             self.action = Action::Delete;
         }
 
