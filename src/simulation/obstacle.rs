@@ -46,12 +46,7 @@ impl Clone for Rectangle {
 
 impl Default for Rectangle {
     fn default() -> Self {
-        let size = SimulationConfigs::default().size;
-        Self::new(
-            (i64::from(size - 10), i64::from(size - 10)),
-            (i64::from(size - 2), i64::from(size - 2)),
-            size,
-        )
+        Self::new((80, 80), (110, 110), SimulationConfigs::default().size)
     }
 }
 
