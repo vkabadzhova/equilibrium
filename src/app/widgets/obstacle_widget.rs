@@ -5,7 +5,7 @@ use crate::simulation::obstacle::{Obstacle, ObstaclesType, Rectangle};
 
 /// Shows off one example of each major type of widget.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-//#[derive(Copy, Clone)]
+//#[derive(Clone)]
 pub struct ObstacleWidget {
     enabled: bool,
     /// Collection of obstacle types. The elements describe each possible type (e.g. Rectangle, Circle,
@@ -81,7 +81,7 @@ impl Default for ObstacleLayout {
     fn default() -> Self {
         ObstacleLayout {
             name: "Rectangle".to_string(),
-            obstacle: ObstaclesType::Rectangle(Rectangle::new((50, 120), (120, 110), 128)),
+            obstacle: ObstaclesType::Rectangle(Rectangle::default()),
         }
     }
 }
@@ -89,7 +89,7 @@ impl Default for ObstacleLayout {
 impl ObstacleLayout {
     /// Creates the layout for a single obstacle type
     pub fn ui(&mut self, ui: &mut Ui) {
-        let mut approximate_points = self.obstacle.get_approximate_points();
+        let approximate_points = self.obstacle.get_approximate_points();
         for i in 0..approximate_points.len() {
             ui.label("Point: ");
             ui.add(egui::DragValue::new(&mut approximate_points[i].0).speed(1.0));

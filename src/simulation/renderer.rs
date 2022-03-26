@@ -170,7 +170,7 @@ impl Renderer {
     /// After altering the obstacles list. Refresh the fluid's configuration by using that
     /// function.
     pub fn update_obstacles(&mut self) {
-        for obstacle in self.obstacles.iter() {
+        for obstacle in self.obstacles.iter_mut() {
             self.fluid.fill_obstacle(obstacle);
         }
     }
@@ -191,6 +191,7 @@ impl Renderer {
                     self.next_obstacles = obstacle_widget
                         .obstacles
                         .iter()
+                        .cloned()
                         .map(|el| el.obstacle)
                         .collect();
                 }
@@ -205,7 +206,7 @@ mod tests {
     use crate::app::widgets::fluid_widget::FluidWidget;
     use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
     use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
-    use crate::simulation::{fluid::Fluid, renderer::Renderer};
+    use crate::simulation::{fluid::Fluid, obstacle::Obstacle, renderer::Renderer};
 
     #[test]
     fn update_initial_configs() {

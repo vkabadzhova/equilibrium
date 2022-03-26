@@ -173,7 +173,6 @@ impl Fluid {
     ///
     /// *Note 2.:* The above example is appropriate for the left wall:
     ///  __________
-    ///  ||        |
     ///  ||  ^     |
     ///  || /      |
     ///  ||/       |
@@ -593,7 +592,7 @@ impl Fluid {
 
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
     /// NB: works as approximation to the real obstacle. By approximating a rectangle.
-    pub fn fill_obstacle(&mut self, obstacle: &ObstaclesType) {
+    pub fn fill_obstacle(&mut self, obstacle: &mut ObstaclesType) {
         let points = obstacle.get_approximate_points();
 
         for x in points[0].0..points[1].0 {
