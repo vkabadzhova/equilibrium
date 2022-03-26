@@ -596,7 +596,7 @@ impl Fluid {
         let points = obstacle.get_approximate_points();
 
         for x in points[0].0..points[1].0 {
-            for y in points[1].1..points[0].1 {
+            for y in points[0].1..points[1].1 {
                 self.cells_type[idx!(x, y, i64::from(self.simulation_configs.size))] =
                     ContainerWall::DefaultWall;
             }
