@@ -58,6 +58,18 @@ impl super::View for ObstacleWidget {
                 .default_open(false)
                 .show(ui, |ui| obstacle.ui(ui));
         }
+
+        if ui.button("+").clicked() {
+            let default_obstacle_layout = ObstacleLayout::default();
+            self.obstacles.push(ObstacleLayout {
+                name: format!(
+                    "{}/{}",
+                    default_obstacle_layout.name,
+                    self.obstacles.len() + 1
+                ),
+                obstacle: default_obstacle_layout.obstacle,
+            });
+        }
     }
 }
 
