@@ -74,7 +74,47 @@ impl ObstacleWidget {
         let Self { .. } = self;
     }
 
-    fn add_obstacle(&mut self) {
+    /// Adds new obstacle with the appropriate configurations: Every obstacle collapsing header
+    /// should have a unique name. Therefore, the type of the obstacle and its serial number. If an
+    /// obstacle with a serial number in the middle of the sequence has been deleted, that doesn't
+    /// affect the newly generated ones, and their order keeps progressing from the point it has
+    /// been left at.
+    ///
+    /// Example:
+    /// ```
+    /// use equilibrium::app::widgets::obstacle_widget::*;
+    ///
+    /// let mut obstacle_widget = ObstacleWidget::default();
+    ///
+    /// // ----------- Create and delete a new obstacle -----------
+    /// obstacle_widget.add_obstacle();
+    ///
+    /// // Assert it is correctly counted
+    /// assert_eq!(
+    ///     obstacle_widget.obstacles.last().unwrap().name,
+    ///     "Rectangle/1"
+    /// );
+    ///
+    /// obstacle_widget.obstacles.pop();
+    /// obstacle_widget.add_obstacle();
+    ///
+    /// // Main: Assert the last element after removal is correctly counted.
+    /// assert_eq!(
+    ///     obstacle_widget.obstacles.last().unwrap().name,
+    ///     "Rectangle/2"
+    /// );
+    ///
+    /// // Assert Rectangle/1 is missing
+    /// let count_rectangle_one = obstacle_widget
+    ///     .obstacles
+    ///     .iter()
+    ///     .filter(|&el| el.name == "Rectangle/1")
+    ///     .count();
+    ///
+    /// assert_eq!(count_rectangle_one, 0);
+    ///
+    /// ```
+    pub fn add_obstacle(&mut self) {
         let default_obstacle_layout = ObstacleLayout::default();
 
         self.last_obstacle_id += 1;
@@ -141,5 +181,57 @@ impl ObstacleLayout {
                 approximate_points[i].1 = 0;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use crate::app::widgets::obstacle_widget::*;
+
+    #[test]
+    fn default_obstacle() {
+        let obstacle_widget = ObstacleWidget::default();
+        assert_eq!(obstacle_widget.obstacles.len(), 1);
+    }
+
+    #[test]
+    fn add_obstacle() {
+        let mut obstacle_widget = ObstacleWidget::default();
+
+        obstacle_widget.add_obstacle();
+
+        // Safety note: we just created an obstacle, so last() will return it.
+        assert_eq!(
+            obstacle_widget.obstacles.last().unwrap().name,
+            "Rectangle/1"
+        );
+
+        // ----------- Create and delete a new obstacle -----------
+        obstacle_widget.add_obstacle();
+
+        // Assert it is correctly counted
+        assert_eq!(
+            obstacle_widget.obstacles.last().unwrap().name,
+            "Rectangle/2"
+        );
+
+        obstacle_widget.obstacles.pop();
+        obstacle_widget.add_obstacle();
+
+        // Main assert: Assure the last element after removal is correctly counted.
+        assert_eq!(
+            obstacle_widget.obstacles.last().unwrap().name,
+            "Rectangle/3"
+        );
+
+        // Assert Rectangle/2 is missing
+        let count_rectangle_two = obstacle_widget
+            .obstacles
+            .iter()
+            .filter(|&el| el.name == "Rectangle/2")
+            .count();
+
+        assert_eq!(count_rectangle_two, 0);
     }
 }
