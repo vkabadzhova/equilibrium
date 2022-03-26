@@ -3,6 +3,7 @@ use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
 use crate::simulation::renderer::density_img_path;
 use crate::simulation::renderer::Renderer;
 use crossbeam_utils::thread;
+use eframe::egui::global_dark_light_mode_switch;
 use eframe::{egui, epi};
 use image::imageops::FilterType::Triangle;
 use image::GenericImageView;
@@ -39,10 +40,10 @@ impl App {
 
         Self {
             current_frame: 0,
-            renderer: renderer,
+            renderer,
             is_simulated: false,
             simulation_progress: 1.0,
-            signal_receiver: signal_receiver,
+            signal_receiver,
             settings_menu: SettingsMenu::default(),
         }
     }
@@ -150,6 +151,8 @@ impl epi::App for App {
             .update_initial_configs(&settings_menu.settings_menu);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            global_dark_light_mode_switch(ui);
+
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Exit").clicked() {
@@ -284,7 +287,6 @@ impl epi::App for App {
 
 #[cfg(test)]
 mod tests {
-
     use crate::simulation::renderer::density_img_path;
 
     #[test]
