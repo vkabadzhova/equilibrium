@@ -15,21 +15,29 @@ use std::sync::mpsc::{Receiver, Sender};
 #[cfg_attr(feature = "persistence", serde(default))]
 pub struct App {
     #[cfg_attr(feature = "persistence", serde(skip))]
+    /// The "id" of the last showed image in the application of a given simulation
+    /// in the context of specific simulation
     current_frame: i64,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
+    /// The fluid driver that renders its state in a file
     renderer: Renderer,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
+    /// Is a fluid simulated and ready to be showed 
     is_simulated: bool,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
+    /// The progress of the simulation
     simulation_progress: f32,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
+    /// Between-threads receiver, participant in a channel open between the 
+    /// renderer and the application
     signal_receiver: Receiver<i64>,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
+    /// Collection of all the widgets in the application
     settings_menu: SettingsMenu,
 }
 
@@ -148,7 +156,7 @@ impl epi::App for App {
         } = self;
 
         self.renderer
-            .update_initial_configs(&settings_menu.settings_menu);
+            .update_configs(&settings_menu.settings_menu);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             Self::bar_content(ui, frame);

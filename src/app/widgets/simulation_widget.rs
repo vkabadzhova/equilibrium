@@ -21,7 +21,7 @@ impl Default for SimulationWidget {
 
 impl super::Setting for SimulationWidget {
     fn name(&self) -> &'static str {
-        "Simulation"
+        "🔨 Simulation"
     }
 
     fn show(&mut self, ctx: &egui::CtxRef, open: &mut bool) {

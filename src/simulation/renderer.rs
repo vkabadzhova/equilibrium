@@ -28,7 +28,8 @@ pub(crate) use density_img_path;
 /// renderer live during the simulation (the current state is stored in the
 /// struct’s member [`fluid`](crate::simulation::renderer::Renderer::fluid)), or,
 /// otherwise, update it at the **beginning** of the new simulation (i.e.
-/// frame 0).
+/// frame 0). The latter is achieved by bufferring the future state of the configurations.
+/// In order to update the next configurations, use [`Renderer::update_initial_configs()`].
 pub struct Renderer {
     /// The Renderer owns the fluid that it simulates
     pub fluid: Fluid,
@@ -179,7 +180,7 @@ impl Renderer {
     /// Updates the configurations for the next simulation. As an example,
     /// during rendering, the configurations new configurations may be saved in
     /// the renderer, but will only be applied after the beginning of the next simulation
-    pub fn update_initial_configs(&mut self, settings_menu: &Vec<SettingType>) {
+    pub fn update_configs(&mut self, settings_menu: &Vec<SettingType>) {
         for setting in settings_menu.iter() {
             match setting {
                 SettingType::Fluid(fluid_widget) => {
@@ -233,7 +234,7 @@ mod tests {
             SettingsMenu::from_settings(vec![SettingType::Fluid(fluid_ui_setting)], false);
 
         //---------- Test's purpouse -----------
-        renderer.update_initial_configs(&settings_menu.settings_menu);
+        renderer.update_configs(&settings_menu.settings_menu);
 
         assert_eq!(renderer.next_fluid_configs.diffusion, 0.4212312);
     }

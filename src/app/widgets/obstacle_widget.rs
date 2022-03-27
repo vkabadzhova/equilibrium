@@ -26,7 +26,7 @@ impl Default for ObstacleWidget {
 
 impl super::Setting for ObstacleWidget {
     fn name(&self) -> &'static str {
-        "Obstacle"
+        "💢 Obstacle"
     }
 
     fn show(&mut self, ctx: &egui::CtxRef, open: &mut bool) {

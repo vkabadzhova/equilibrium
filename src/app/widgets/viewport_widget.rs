@@ -24,7 +24,7 @@ impl Default for ViewportWidget {
 
 impl super::Setting for ViewportWidget {
     fn name(&self) -> &'static str {
-        "Viewport"
+        "🚪Viewport"
     }
 
     fn show(&mut self, ctx: &egui::CtxRef, open: &mut bool) {

@@ -72,8 +72,8 @@ macro_rules! idx {
 ///
 ///
 /// velocities_y |^
-///              | \  sum of the two vectors forms a new vector: the direction of the
-///              |  \ fluid in that exact cell
+///              | \  the sum of the two vectors forms a new vector: the direction of 
+///              |  \ the fluid in that exact cell
 ///              ---->
 ///            velocities_x
 pub struct Fluid {
@@ -94,7 +94,13 @@ pub struct Fluid {
     /// **Note:** The velocity is a vector formed by both the `velocities_x` and `velocities_y`
     /// vector structures
     pub velocities_y: Vec<f32>,
+    /// The previous state of the velocities_x. Needed in order to make the calculations based on
+    /// the previous state of the four neighbour cells, and not based on the newly calculated ones,
+    /// since the simulation goes linearly through the picture.
     velocities_x0: Vec<f32>,
+    /// The previous state of the velocities_y. Needed in order to make the calculations based on
+    /// the previous state of the four neighbour cells, and not based on the newly calculated ones,
+    /// since the simulation goes linearly through the picture.
     velocities_y0: Vec<f32>,
     /// Defines which cells are "allowed" for the fluid to run into and which are "obsticles"
     /// by also defining which side of a given obstacle a cell is via the [`ContainerWall`]
@@ -534,7 +540,7 @@ impl Fluid {
         }
     }
 
-    fn init_cells_type(&mut self) {
+    fn init_walls(&mut self) {
         for i in 0..self.simulation_configs.size {
             self.cells_type[idx!(i, 0, self.simulation_configs.size)] = ContainerWall::DefaultWall;
             self.cells_type[idx!(
@@ -587,7 +593,7 @@ impl Fluid {
     fn init(&mut self) {
         self.init_velocities();
         self.init_density();
-        self.init_cells_type();
+        self.init_walls();
     }
 
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]

@@ -21,7 +21,7 @@ impl Default for FluidWidget {
 
 impl super::Setting for FluidWidget {
     fn name(&self) -> &'static str {
-        "Fluid"
+        "🌊 Fluid"
     }
 
     fn show(&mut self, ctx: &egui::CtxRef, open: &mut bool) {
