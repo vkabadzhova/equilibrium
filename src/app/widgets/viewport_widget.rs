@@ -64,7 +64,6 @@ impl super::View for ViewportWidget {
         ui.vertical_centered(|ui| {
             let tooltip_text = "The full documentation on the simulation parameters can be found by typing `cargo d --open`";
             ui.label(tooltip_text);
-            ui.hyperlink("https://docs.rs/egui/").on_hover_text(tooltip_text);
         });
     }
 }
@@ -89,7 +88,7 @@ impl ViewportWidget {
         }
         ui.end_row();
 
-        ui.label("Simulation spped on play");
+        ui.label("Simulation speed on play");
         //.on_hover_text(" Configuration for the amount of seconds between frame change for the play button");
         ui.add(egui::DragValue::new(play_simulation_speed).speed(0.01));
         if *play_simulation_speed < 0.0 {

@@ -29,7 +29,7 @@ pub(crate) use density_img_path;
 /// struct’s member [`fluid`](crate::simulation::renderer::Renderer::fluid)), or,
 /// otherwise, update it at the **beginning** of the new simulation (i.e.
 /// frame 0). The latter is achieved by bufferring the future state of the configurations.
-/// In order to update the next configurations, use [`Renderer::update_initial_configs()`].
+/// In order to update the next configurations, use [`Renderer::update_configs()`].
 pub struct Renderer {
     /// The Renderer owns the fluid that it simulates
     pub fluid: Fluid,
@@ -211,7 +211,7 @@ mod tests {
     use crate::simulation::{fluid::Fluid, obstacle::Obstacle, renderer::Renderer};
 
     #[test]
-    fn update_initial_configs() {
+    fn update_configs() {
         //---------- Init renderer -----------
         let fluid_configs = FluidConfigs::default();
         let simulation_configs = SimulationConfigs::default();

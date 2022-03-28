@@ -24,7 +24,7 @@ pub struct App {
     renderer: Renderer,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
-    /// Is a fluid simulated and ready to be showed 
+    /// Is a fluid simulated and ready to be showed
     is_simulated: bool,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
@@ -32,7 +32,7 @@ pub struct App {
     simulation_progress: f32,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
-    /// Between-threads receiver, participant in a channel open between the 
+    /// Between-threads receiver, participant in a channel open between the
     /// renderer and the application
     signal_receiver: Receiver<i64>,
 
@@ -56,7 +56,7 @@ impl App {
         }
     }
 
-    fn get_resolution(&mut self) -> Option<u8> {
+    fn get_resolution(&self) -> Option<u8> {
         for i in self.settings_menu.settings_menu.iter() {
             match i {
                 SettingType::Viewport(result) => {
@@ -101,20 +101,19 @@ impl App {
     }
 
     fn render_next_received_img(&mut self, frame: &epi::Frame, ui: &mut egui::Ui) {
-        let current_frame = self.signal_receiver.try_recv().unwrap();
-        self.simulation_progress += 1.0 / self.renderer.fluid.simulation_configs.frames as f32;
-        if current_frame > self.current_frame {
+        for i_frame_iter in self.signal_receiver.try_iter() {
             App::show_image(
-                density_img_path!(&self.renderer.rendered_images_dir, current_frame),
+                density_img_path!(&self.renderer.rendered_images_dir, i_frame_iter),
                 self.get_resolution()
                     .expect("A viewport setting should exsist."),
                 frame,
                 ui,
             );
-            self.current_frame = current_frame;
+            self.simulation_progress += 1.0 / self.renderer.fluid.simulation_configs.frames as f32;
+            self.current_frame = i_frame_iter;
         }
 
-        if current_frame == self.renderer.fluid.simulation_configs.frames - 1 {
+        if self.current_frame == self.renderer.fluid.simulation_configs.frames - 1 {
             self.simulation_progress = 1.0;
         }
 
@@ -155,8 +154,7 @@ impl epi::App for App {
             settings_menu,
         } = self;
 
-        self.renderer
-            .update_configs(&settings_menu.settings_menu);
+        self.renderer.update_configs(&settings_menu.settings_menu);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             Self::bar_content(ui, frame);

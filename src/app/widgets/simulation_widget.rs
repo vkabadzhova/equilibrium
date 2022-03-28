@@ -61,7 +61,6 @@ impl super::View for SimulationWidget {
         ui.vertical_centered(|ui| {
             let tooltip_text = "The full documentation on the simulation parameters can be found by typing `cargo d --open`";
             ui.label(tooltip_text);
-            ui.hyperlink("https://docs.rs/egui/").on_hover_text(tooltip_text);
         });
     }
 }
