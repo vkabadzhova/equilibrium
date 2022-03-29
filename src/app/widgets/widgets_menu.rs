@@ -117,6 +117,11 @@ impl SettingsMenu {
             set_open(open, setting.name(), is_open);
         }
     }
+
+    /// Close all open windows.
+    pub fn close_all(&mut self) {
+        self.open.clear();
+    }
 }
 
 fn set_open(open: &mut BTreeSet<String>, key: &'static str, is_open: bool) {

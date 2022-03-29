@@ -265,6 +265,10 @@ impl epi::App for App {
                         if ui.button("Organize windows").clicked() {
                             ui.ctx().memory().reset_areas();
                         }
+
+                        if ui.button("Close all").clicked() {
+                            self.settings_menu.close_all();
+                        }
                     });
                 });
             });
