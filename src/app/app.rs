@@ -144,134 +144,25 @@ impl epi::App for App {
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &epi::Frame) {
-        let Self {
-            current_frame,
-            renderer,
-            is_simulated,
-            simulation_progress,
-            signal_receiver,
-            settings_menu,
-        } = self;
-
-        renderer.update_configs(&settings_menu.settings_menu);
+        self.renderer
+            .update_configs(&self.settings_menu.settings_menu);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             Self::bar_content(ui, frame);
         });
 
-        egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            ui.heading("Navigate simulation");
-
-            ui.add(
-                egui::Slider::new(
-                    current_frame,
-                    0..=self.renderer.fluid.simulation_configs.frames - 1,
-                )
-                .text("Current frame"),
-            );
-            if ui.button("Previous").clicked() {
-                *current_frame =
-                    (*current_frame - 1) % self.renderer.fluid.simulation_configs.frames;
-                if *current_frame < 0 {
-                    *current_frame = self.renderer.fluid.simulation_configs.frames - 1;
-                }
-            }
-
-            if ui.button("Next").clicked() {
-                *current_frame =
-                    (*current_frame + 1) % self.renderer.fluid.simulation_configs.frames;
-            }
-
-            ui.separator();
-
-            if ui.button("Simulate fluid").clicked() {
-                *is_simulated = true;
-                *simulation_progress = 0.0;
-                *current_frame = 0;
-                *signal_receiver = App::render(&mut self.renderer);
-            }
-
-            ui.label("Simulation Progress:");
-            let progress_bar = egui::ProgressBar::new(*simulation_progress).show_percentage();
-            ui.add(progress_bar);
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 0.0;
-                    ui.label("powered by ");
-                    ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-                    ui.label(" and ");
-                    ui.hyperlink_to("eframe", "https://github.com/emilk/egui/tree/master/eframe");
-                });
-            });
+        egui::SidePanel::left("left_panel").show(ctx, |ui| {
+            self.left_panel(ui);
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Welcome to the Equilibrium Fluid Simulator!");
-
-            if self.current_frame < self.renderer.fluid.simulation_configs.frames - 1
-                && self.simulation_progress != 1.0
-            {
-                self.render_next_received_img(frame, ui);
-            } else if self.is_simulated {
-                App::show_image(
-                    density_img_path!(&self.renderer.rendered_images_dir, self.current_frame),
-                    self.get_resolution()
-                        .expect("A viewport setting should exsist."),
-                    frame,
-                    ui,
-                );
-            }
-
-            ui.hyperlink("https://github.com/vkabadzhova/equilibrium");
-            ui.add(egui::github_link_file!(
-                "https://github.com/vkabadzhova/equilibrium",
-                "Source code."
-            ));
+            self.central_panel(ui, frame);
         });
 
-        egui::SidePanel::right("egui_demo_panel")
+        egui::SidePanel::right("right_panel")
             .min_width(180.0)
             .default_width(180.0)
-            .show(ctx, |ui| {
-                egui::trace!(ui);
-                ui.vertical_centered(|ui| {
-                    ui.heading("✒ Settings");
-                });
-
-                ui.separator();
-
-                ScrollArea::vertical().show(ui, |ui| {
-                    use egui::special_emojis::{GITHUB, OS_APPLE, OS_LINUX, OS_WINDOWS};
-
-                    ui.vertical_centered(|ui| {
-                        ui.label("Welcome to the equilibrium fluid simulator - my high school diploma thesis.");
-
-                        ui.label(format!(
-                            "You run it on the web, or natively on {}{}{}",
-                            OS_APPLE, OS_LINUX, OS_WINDOWS,
-                        ));
-
-                        ui.hyperlink_to(
-                            format!("{} equilibrium home page", GITHUB),
-                            "https://github.com/vkabadzhova/equilibrium",
-                        );
-                    });
-
-                    ui.separator();
-                    self.settings_menu.checkboxes(ui);
-
-                    ui.vertical_centered(|ui| {
-                        if ui.button("Organize windows").clicked() {
-                            ui.ctx().memory().reset_areas();
-                        }
-
-                        if ui.button("Close all").clicked() {
-                            self.settings_menu.close_all();
-                        }
-                    });
-                });
-            });
+            .show(ctx, |ui| self.right_panel(ui));
 
         self.settings_menu.windows(ctx);
 
@@ -280,7 +171,6 @@ impl epi::App for App {
                 ui.label("Windows can be moved by dragging them.");
                 ui.label("They are automatically sized based on contents.");
                 ui.label("You can turn on resizing and scrolling if you like.");
-                ui.label("You would normally chose either panels OR windows.");
             });
         }
     }
@@ -297,6 +187,125 @@ impl App {
                         frame.quit();
                     }
                 });
+            });
+        });
+    }
+
+    fn left_panel(&mut self, ui: &mut egui::Ui) {
+        let Self {
+            current_frame,
+            renderer: _,
+            is_simulated,
+            simulation_progress,
+            signal_receiver,
+            ..
+        } = self;
+
+        ui.heading("Navigate simulation");
+
+        ui.add(
+            egui::Slider::new(
+                current_frame,
+                0..=self.renderer.fluid.simulation_configs.frames - 1,
+            )
+            .text("Current frame"),
+        );
+        if ui.button("Previous").clicked() {
+            *current_frame = (*current_frame - 1) % self.renderer.fluid.simulation_configs.frames;
+            if *current_frame < 0 {
+                *current_frame = self.renderer.fluid.simulation_configs.frames - 1;
+            }
+        }
+
+        if ui.button("Next").clicked() {
+            *current_frame = (*current_frame + 1) % self.renderer.fluid.simulation_configs.frames;
+        }
+
+        ui.separator();
+
+        if ui.button("Simulate fluid").clicked() {
+            *is_simulated = true;
+            *simulation_progress = 0.0;
+            *current_frame = 0;
+            *signal_receiver = App::render(&mut self.renderer);
+        }
+
+        ui.label("Simulation Progress:");
+        let progress_bar = egui::ProgressBar::new(*simulation_progress).show_percentage();
+        ui.add(progress_bar);
+
+        ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                ui.label("powered by ");
+                ui.hyperlink_to("egui", "https://github.com/emilk/egui");
+                ui.label(" and ");
+                ui.hyperlink_to("eframe", "https://github.com/emilk/egui/tree/master/eframe");
+            });
+        });
+    }
+
+    fn central_panel(&mut self, ui: &mut egui::Ui, frame: &epi::Frame) {
+        ui.heading("Welcome to the Equilibrium Fluid Simulator!");
+
+        if self.current_frame < self.renderer.fluid.simulation_configs.frames - 1
+            && self.simulation_progress != 1.0
+        {
+            self.render_next_received_img(frame, ui);
+        } else if self.is_simulated {
+            App::show_image(
+                density_img_path!(&self.renderer.rendered_images_dir, self.current_frame),
+                self.get_resolution()
+                    .expect("A viewport setting should exsist."),
+                frame,
+                ui,
+            );
+        }
+
+        ui.hyperlink("https://github.com/vkabadzhova/equilibrium");
+        ui.add(egui::github_link_file!(
+            "https://github.com/vkabadzhova/equilibrium",
+            "Source code."
+        ));
+    }
+
+    fn right_panel(&mut self, ui: &mut egui::Ui) {
+        ui.vertical_centered(|ui| {
+            ui.heading("✒ Settings");
+        });
+
+        ui.separator();
+
+        ScrollArea::vertical().show(ui, |ui| {
+            use egui::special_emojis::{GITHUB, OS_APPLE, OS_LINUX, OS_WINDOWS};
+
+            ui.vertical_centered(|ui| {
+                ui.label(
+                    "Welcome to the equilibrium fluid simulator - my high school diploma thesis.",
+                );
+
+                ui.label(format!(
+                    "You run it on the web, or natively on {}{}{}",
+                    OS_APPLE, OS_LINUX, OS_WINDOWS,
+                ));
+
+                ui.hyperlink_to(
+                    format!("{} equilibrium home page", GITHUB),
+                    "https://github.com/vkabadzhova/equilibrium",
+                );
+            });
+
+            ui.separator();
+            self.settings_menu.checkboxes(ui);
+
+            ui.vertical_centered(|ui| {
+                if ui.button("Organize windows").clicked() {
+                    ui.ctx().memory().reset_areas();
+                }
+
+                if ui.button("Close all").clicked() {
+                    self.settings_menu.close_all();
+                }
             });
         });
     }
