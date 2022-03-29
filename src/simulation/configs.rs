@@ -25,8 +25,8 @@ impl SimulationConfigs {
     /// Creates new SimulationConfigs struct
     pub fn new(delta_t: f32, frames: i64, fluid_container_size: u32) -> Self {
         SimulationConfigs {
-            delta_t: delta_t,
-            frames: frames,
+            delta_t,
+            frames,
             size: fluid_container_size,
         }
     }

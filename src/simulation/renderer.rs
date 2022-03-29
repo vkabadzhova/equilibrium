@@ -80,7 +80,7 @@ impl Default for Renderer {
             next_obstacles: vec![ObstaclesType::Rectangle(
                 crate::simulation::obstacle::Rectangle::default(),
             )],
-            fluid: fluid,
+            fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         };
 
@@ -107,7 +107,7 @@ impl Renderer {
             obstacles_color,
             obstacles: Vec::new(),
             next_obstacles: Vec::new(),
-            fluid: fluid,
+            fluid,
             rendered_images_dir: Renderer::make_rendered_images_dir(),
         }
     }
@@ -198,7 +198,7 @@ impl Renderer {
     /// Updates the configurations for the next simulation. As an example,
     /// during rendering, the configurations new configurations may be saved in
     /// the renderer, but will only be applied after the beginning of the next simulation
-    pub fn update_configs(&mut self, settings_menu: &Vec<SettingType>) {
+    pub fn update_configs(&mut self, settings_menu: &[SettingType]) {
         for setting in settings_menu.iter() {
             match setting {
                 SettingType::Fluid(fluid_widget) => {

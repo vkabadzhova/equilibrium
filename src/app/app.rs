@@ -58,11 +58,8 @@ impl App {
 
     fn get_resolution(&self) -> Option<u8> {
         for i in self.settings_menu.settings_menu.iter() {
-            match i {
-                SettingType::Viewport(result) => {
-                    return Some(result.image_resize_factor);
-                }
-                _ => {}
+            if let SettingType::Viewport(result) = i {
+                return Some(result.image_resize_factor);
             }
         }
         None
@@ -177,6 +174,7 @@ impl epi::App for App {
 }
 
 impl App {
+    /// The GUI organization for the bar on the top of the application.
     fn bar_content(ui: &mut egui::Ui, frame: &epi::Frame) {
         ui.horizontal_wrapped(|ui| {
             global_dark_light_mode_switch(ui);
@@ -191,6 +189,7 @@ impl App {
         });
     }
 
+    /// The GUI organization for the left panel with the navigation through the simulation.
     fn left_panel(&mut self, ui: &mut egui::Ui) {
         let Self {
             current_frame,
@@ -245,6 +244,7 @@ impl App {
         });
     }
 
+    /// The GUI organization for the central panel with the rendered images display.
     fn central_panel(&mut self, ui: &mut egui::Ui, frame: &epi::Frame) {
         ui.heading("Welcome to the Equilibrium Fluid Simulator!");
 
@@ -269,6 +269,7 @@ impl App {
         ));
     }
 
+    /// The GUI organization for the right panel with checkbox menus.
     fn right_panel(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             ui.heading("✒ Settings");

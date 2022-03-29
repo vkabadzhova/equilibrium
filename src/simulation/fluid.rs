@@ -54,7 +54,7 @@ enum Orientation {
     /// The Oy axis and semantically is used as all parallel to it
     AdjustColumn,
     /// No axis, the function is operating on a non vector-based concept
-    AdjustPassive,
+    Passive,
 }
 
 macro_rules! idx {
@@ -72,7 +72,7 @@ macro_rules! idx {
 ///
 ///
 /// velocities_y |^
-///              | \  the sum of the two vectors forms a new vector: the direction of 
+///              | \  the sum of the two vectors forms a new vector: the direction of
 ///              |  \ the fluid in that exact cell
 ///              ---->
 ///            velocities_x
@@ -205,7 +205,7 @@ impl Fluid {
         orientation: Orientation,
         x: &mut [f32],
         size: u32,
-        cells_type: &Vec<ContainerWall>,
+        cells_type: &[ContainerWall],
     ) {
         let size = i64::from(size);
         for j in 0..=size - 1 {
@@ -251,7 +251,7 @@ impl Fluid {
                                 -x[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
                         }
                     }
-                    Orientation::AdjustPassive => {
+                    Orientation::Passive => {
                         // NB: works only for the edges
 
                         x[idx!(i, 0, size)] = x[idx!(i, 1, size)];
@@ -281,7 +281,7 @@ impl Fluid {
         size: u32,
         delta_t: &f32,
         frames: i64,
-        cells_type: &Vec<ContainerWall>,
+        cells_type: &[ContainerWall],
     ) {
         let size_float = (size - 2) as f32;
         let a = delta_t * diffusion * size_float * size_float;
@@ -305,7 +305,7 @@ impl Fluid {
         c: f32,
         size: u32,
         frames: i64,
-        cells_type: &Vec<ContainerWall>,
+        cells_type: &[ContainerWall],
     ) {
         let c_recip = 1.0 / c;
         for _k in 0..frames {
@@ -330,7 +330,7 @@ impl Fluid {
         div: &mut [f32],
         size: u32,
         frames: i64,
-        cells_type: &Vec<ContainerWall>,
+        cells_type: &[ContainerWall],
     ) {
         for j in 1..size - 1 {
             for i in 1..size - 1 {
@@ -344,10 +344,10 @@ impl Fluid {
             }
         }
 
-        Fluid::set_boundaries(Orientation::AdjustPassive, div, size, cells_type);
-        Fluid::set_boundaries(Orientation::AdjustPassive, p, size, cells_type);
+        Fluid::set_boundaries(Orientation::Passive, div, size, cells_type);
+        Fluid::set_boundaries(Orientation::Passive, p, size, cells_type);
         Fluid::lin_solve(
-            Orientation::AdjustPassive,
+            Orientation::Passive,
             p,
             div,
             1.0,
@@ -378,7 +378,7 @@ impl Fluid {
         velocities_y: &[f32],
         size: u32,
         delta_t: &f32,
-        cells_type: &Vec<ContainerWall>,
+        cells_type: &[ContainerWall],
     ) {
         let (mut i0, mut i1, mut j0, mut j1): (f32, f32, f32, f32);
 
@@ -494,7 +494,7 @@ impl Fluid {
         );
 
         Fluid::diffuse(
-            Orientation::AdjustPassive,
+            Orientation::Passive,
             &mut self.scratch_space,
             &self.density,
             &self.fluid_configs.diffusion,
@@ -505,7 +505,7 @@ impl Fluid {
         );
 
         Fluid::advect(
-            Orientation::AdjustPassive,
+            Orientation::Passive,
             &mut self.density,
             &self.scratch_space,
             &self.velocities_x,
