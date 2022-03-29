@@ -228,6 +228,7 @@ mod tests {
     use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
     use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
     use crate::simulation::{fluid::Fluid, obstacle::Obstacle, renderer::Renderer};
+    use eframe::egui::Color32;
 
     #[test]
     fn update_configs() {
@@ -236,7 +237,7 @@ mod tests {
         let simulation_configs = SimulationConfigs::default();
 
         let fluid = Fluid::new(fluid_configs, simulation_configs);
-        let mut renderer = Renderer::new(fluid);
+        let mut renderer = Renderer::new(fluid, Color32::RED);
 
         // assert it is correctly configured for the test
         assert_ne!(renderer.fluid.fluid_configs.diffusion, 0.4212312);
