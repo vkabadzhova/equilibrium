@@ -11,6 +11,8 @@ pub struct ObstacleWidget {
     /// Collection of obstacle types. The elements describe each possible type (e.g. Rectangle, Circle,
     /// etc.) and their names must be unique
     pub obstacles: Vec<ObstacleLayout>,
+    /// The obstacles' color in the scene
+    pub color: Color32,
     last_obstacle_id: u32,
 }
 
@@ -19,6 +21,7 @@ impl Default for ObstacleWidget {
         Self {
             enabled: true,
             obstacles: vec![ObstacleLayout::default()],
+            color: egui::Color32::RED,
             last_obstacle_id: 0,
         }
     }
@@ -48,12 +51,18 @@ impl super::View for ObstacleWidget {
                 .num_columns(2)
                 .spacing([40.0, 4.0])
                 .striped(true)
-                .show(ui, |_| {
-                    self.gallery_grid_contents();
-                });
+                .show(ui, |_| {});
         });
 
         ui.separator();
+
+        ui.label("Choose obstacles' color");
+        ui.color_edit_button_srgba(&mut self.color);
+        ui.end_row();
+
+        ui.separator();
+
+        ui.label("Obstacles:");
 
         for obstacle in self.obstacles.iter_mut() {
             CollapsingHeader::new(obstacle.name.clone())
@@ -70,10 +79,6 @@ impl super::View for ObstacleWidget {
 }
 
 impl ObstacleWidget {
-    fn gallery_grid_contents(&mut self) {
-        let Self { .. } = self;
-    }
-
     /// Adds new obstacle with the appropriate configurations: Every obstacle collapsing header
     /// should have a unique name. Therefore, the type of the obstacle and its serial number. If an
     /// obstacle with a serial number in the middle of the sequence has been deleted, that doesn't

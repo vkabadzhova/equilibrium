@@ -3,6 +3,7 @@ use super::obstacle::ObstaclesType;
 use crate::app::widgets::widgets_menu::SettingType;
 use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use crate::simulation::fluid::Fluid;
+use eframe::egui::Color32;
 use std::fs;
 use std::sync::mpsc::Sender;
 
@@ -48,6 +49,9 @@ pub struct Renderer {
     /// are stored
     pub rendered_images_dir: String,
 
+    /// The color of all obstacles. Obstacles cannot be set individual colors.
+    pub obstacles_color: eframe::egui::Color32,
+
     /// Collection of all the obstacles. To update the fluid's behaviour to correspond to the
     /// obstacles, use [`update_obstacles`].
     pub obstacles: Vec<ObstaclesType>,
@@ -69,6 +73,7 @@ impl Default for Renderer {
         let mut result = Self {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
+            obstacles_color: Color32::RED,
             obstacles: vec![ObstaclesType::Rectangle(
                 crate::simulation::obstacle::Rectangle::default(),
             )],
@@ -95,10 +100,11 @@ impl Renderer {
     }
 
     /// Creates new Renderer
-    pub fn new(fluid: Fluid) -> Renderer {
+    pub fn new(fluid: Fluid, obstacles_color: Color32) -> Renderer {
         Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
+            obstacles_color,
             obstacles: Vec::new(),
             next_obstacles: Vec::new(),
             fluid: fluid,
@@ -121,6 +127,13 @@ impl Renderer {
             self.fluid.fluid_configs.fluid_color.a(),
         ];
 
+        let obstacles_rgba = [
+            self.obstacles_color.r(),
+            self.obstacles_color.g(),
+            self.obstacles_color.b(),
+            self.obstacles_color.a(),
+        ];
+
         let mut imgbuf = image::ImageBuffer::new(
             self.fluid.simulation_configs.size,
             self.fluid.simulation_configs.size,
@@ -130,7 +143,12 @@ impl Renderer {
             let density = self.fluid.density[idx!(x, y, self.fluid.simulation_configs.size)];
             let cell_type = self.fluid.cells_type[idx!(x, y, self.fluid.simulation_configs.size)];
             if cell_type == ContainerWall::DefaultWall {
-                *pixel = image::Rgba([255, 0, 0, 1]);
+                *pixel = image::Rgba([
+                    obstacles_rgba[0],
+                    obstacles_rgba[1],
+                    obstacles_rgba[2],
+                    obstacles_rgba[3],
+                ]);
             } else if density != 0.0 && cell_type == ContainerWall::NoWall {
                 *pixel = image::Rgba([
                     (density * fluid_rgba[0] as f32) as u8,
@@ -196,6 +214,7 @@ impl Renderer {
                         .cloned()
                         .map(|el| el.obstacle)
                         .collect();
+                    self.obstacles_color = obstacle_widget.color;
                 }
                 _ => {}
             }
