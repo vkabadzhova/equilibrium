@@ -47,6 +47,21 @@ impl super::View for FluidWidget {
                     self.gallery_grid_contents(ui);
                 });
         });
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            ui.checkbox(&mut self.enabled, "Interactive").on_hover_text(
+                "Uncheck to disable the widget so you could inspect the simulation securely.",
+            );
+        });
+
+        ui.separator();
+
+        ui.vertical_centered(|ui| {
+            let tooltip_text = "The full documentation on the simulation parameters can be found by typing `cargo d --open`";
+            ui.label(tooltip_text);
+        });
     }
 }
 

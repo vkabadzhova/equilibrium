@@ -146,15 +146,14 @@ impl epi::App for App {
     fn update(&mut self, ctx: &egui::CtxRef, frame: &epi::Frame) {
         let Self {
             current_frame,
-            // Field not used, ignore it. Item placed for completeness.
-            renderer: _,
+            renderer,
             is_simulated,
             simulation_progress,
             signal_receiver,
             settings_menu,
         } = self;
 
-        self.renderer.update_configs(&settings_menu.settings_menu);
+        renderer.update_configs(&settings_menu.settings_menu);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             Self::bar_content(ui, frame);
