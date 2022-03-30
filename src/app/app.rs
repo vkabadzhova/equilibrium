@@ -1,3 +1,4 @@
+use super::cached_image::CashedImage;
 use crate::app::app::egui::ScrollArea;
 use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
 use crate::simulation::renderer::density_img_path;
@@ -39,6 +40,9 @@ pub struct App {
     #[cfg_attr(feature = "persistence", serde(skip))]
     /// Collection of all the widgets in the application
     settings_menu: SettingsMenu,
+
+    /// The last showed image is chached.
+    cached_image: Option<CashedImage>,
 }
 
 impl App {
@@ -53,10 +57,11 @@ impl App {
             simulation_progress: 1.0,
             signal_receiver,
             settings_menu: SettingsMenu::default(),
+            cached_image: None,
         }
     }
 
-    fn get_resolution(&self) -> Option<u8> {
+    fn get_zoom_factor(&self) -> Option<u8> {
         for i in self.settings_menu.settings_menu.iter() {
             if let SettingType::Viewport(result) = i {
                 return Some(result.image_resize_factor);
@@ -65,24 +70,53 @@ impl App {
         None
     }
 
-    fn show_image(image_path: &str, resolution: u8, frame: &epi::Frame, ui: &mut egui::Ui) {
+    fn show_image(&mut self, image_path: &str, frame: &epi::Frame, ui: &mut egui::Ui) {
+        let zoom_factor = self
+            .get_zoom_factor()
+            .expect("A viewport setting should exsist.");
+
+        if self.cached_image.is_some()
+            && self
+                .cached_image
+                .as_ref()
+                .unwrap()
+                .consists_of(image_path, zoom_factor)
+        {
+            let dimensions = self.cached_image.as_ref().unwrap().dimensions;
+
+            ui.image(
+                self.cached_image.as_ref().unwrap().rendered_texture,
+                dimensions,
+            );
+            return;
+        }
+
         let image = image::open(image_path)
             .expect("Couldn't open image")
             .resize(
-                (ui.available_width() * (resolution as f32 / 100.0)) as u32,
-                (ui.available_height() * (resolution as f32 / 100.0)) as u32,
+                (ui.available_width() * (zoom_factor as f32 / 100.0)) as u32,
+                (ui.available_height() * (zoom_factor as f32 / 100.0)) as u32,
                 Triangle,
             );
+
         let size = image.dimensions();
 
         let image = epi::Image::from_rgba_unmultiplied(
             [size.0.try_into().unwrap(), size.1.try_into().unwrap()],
             &image.into_rgba8().into_raw(),
         );
+
         let texture_id = frame.alloc_texture(image);
         let mut size = egui::Vec2::new(size.0 as f32, size.1 as f32);
         size *= (ui.available_width() / size.x).min(1.0);
+
         ui.image(texture_id, size);
+        self.cached_image = Some(CashedImage {
+            path: image_path.to_string(),
+            zoom_factor,
+            dimensions: size,
+            rendered_texture: texture_id,
+        });
     }
 
     fn render(renderer: &mut Renderer) -> Receiver<i64> {
@@ -101,10 +135,8 @@ impl App {
         let current_frame = self.signal_receiver.try_recv().unwrap();
         self.simulation_progress += 1.0 / self.renderer.fluid.simulation_configs.frames as f32;
         if current_frame > self.current_frame {
-            App::show_image(
+            self.show_image(
                 density_img_path!(&self.renderer.rendered_images_dir, current_frame),
-                self.get_resolution()
-                    .expect("A viewport setting should exsist."),
                 frame,
                 ui,
             );
@@ -254,10 +286,8 @@ impl App {
         {
             self.render_next_received_img(frame, ui);
         } else if self.is_simulated {
-            App::show_image(
+            self.show_image(
                 density_img_path!(&self.renderer.rendered_images_dir, self.current_frame),
-                self.get_resolution()
-                    .expect("A viewport setting should exsist."),
                 frame,
                 ui,
             );
