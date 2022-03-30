@@ -43,6 +43,9 @@ pub struct App {
 
     /// The last showed image is chached.
     cached_image: Option<CashedImage>,
+
+    /// The play button is on
+    is_play_button_on: bool,
 }
 
 impl App {
@@ -58,6 +61,7 @@ impl App {
             signal_receiver,
             settings_menu: SettingsMenu::default(),
             cached_image: None,
+            is_play_button_on: false,
         }
     }
 
@@ -131,21 +135,16 @@ impl App {
         rx
     }
 
-    fn render_next_received_img(&mut self, frame: &epi::Frame, ui: &mut egui::Ui) {
-        let current_frame = self.signal_receiver.try_recv().unwrap();
-        self.simulation_progress += 1.0 / self.renderer.fluid.simulation_configs.frames as f32;
-        if current_frame > self.current_frame {
-            self.show_image(
-                density_img_path!(&self.renderer.rendered_images_dir, current_frame),
-                frame,
-                ui,
-            );
-            self.current_frame = current_frame;
-        }
+    fn move_simulation_frame(&mut self, next_frame: i64, frame: &epi::Frame, ui: &mut egui::Ui) {
+        self.simulation_progress =
+            next_frame as f32 / (self.renderer.fluid.simulation_configs.frames - 1) as f32;
 
-        if current_frame == self.renderer.fluid.simulation_configs.frames - 1 {
-            self.simulation_progress = 1.0;
-        }
+        self.show_image(
+            density_img_path!(&self.renderer.rendered_images_dir, next_frame),
+            frame,
+            ui,
+        );
+        self.current_frame = next_frame;
 
         frame.request_repaint();
     }
@@ -224,46 +223,50 @@ impl App {
 
     /// The GUI organization for the left panel with the navigation through the simulation.
     fn left_panel(&mut self, ui: &mut egui::Ui) {
-        let Self {
-            current_frame,
-            renderer: _,
-            is_simulated,
-            simulation_progress,
-            signal_receiver,
-            ..
-        } = self;
-
         ui.heading("Navigate simulation");
 
         ui.add(
             egui::Slider::new(
-                current_frame,
+                &mut self.current_frame,
                 0..=self.renderer.fluid.simulation_configs.frames - 1,
             )
             .text("Current frame"),
         );
-        if ui.button("Previous").clicked() {
-            *current_frame = (*current_frame - 1) % self.renderer.fluid.simulation_configs.frames;
-            if *current_frame < 0 {
-                *current_frame = self.renderer.fluid.simulation_configs.frames - 1;
-            }
-        }
 
-        if ui.button("Next").clicked() {
-            *current_frame = (*current_frame + 1) % self.renderer.fluid.simulation_configs.frames;
+        ui.horizontal_wrapped(|ui| {
+            if ui.button("Previous").clicked() {
+                self.current_frame =
+                    (self.current_frame - 1) % self.renderer.fluid.simulation_configs.frames;
+                if self.current_frame < 0 {
+                    self.current_frame = self.renderer.fluid.simulation_configs.frames - 1;
+                }
+            }
+
+            if ui.button("Next").clicked() {
+                self.current_frame =
+                    (self.current_frame + 1) % self.renderer.fluid.simulation_configs.frames;
+            }
+        });
+
+        if ui.button("Play simulation").clicked() {
+            self.is_play_button_on = true;
+
+            if self.is_simulated {
+                self.current_frame = 0;
+            }
         }
 
         ui.separator();
 
         if ui.button("Simulate fluid").clicked() {
-            *is_simulated = true;
-            *simulation_progress = 0.0;
-            *current_frame = 0;
-            *signal_receiver = App::render(&mut self.renderer);
+            self.is_simulated = true;
+            self.simulation_progress = 0.0;
+            self.current_frame = 0;
+            self.signal_receiver = App::render(&mut self.renderer);
         }
 
         ui.label("Simulation Progress:");
-        let progress_bar = egui::ProgressBar::new(*simulation_progress).show_percentage();
+        let progress_bar = egui::ProgressBar::new(self.simulation_progress).show_percentage();
         ui.add(progress_bar);
 
         ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
@@ -281,16 +284,22 @@ impl App {
     fn central_panel(&mut self, ui: &mut egui::Ui, frame: &epi::Frame) {
         ui.heading("Welcome to the Equilibrium Fluid Simulator!");
 
-        if self.current_frame < self.renderer.fluid.simulation_configs.frames - 1
-            && self.simulation_progress != 1.0
-        {
-            self.render_next_received_img(frame, ui);
-        } else if self.is_simulated {
-            self.show_image(
-                density_img_path!(&self.renderer.rendered_images_dir, self.current_frame),
-                frame,
-                ui,
-            );
+        let frames_count = self.renderer.fluid.simulation_configs.frames;
+
+        if self.current_frame < frames_count - 1 && !self.is_play_button_on && self.is_simulated {
+            self.current_frame = self.signal_receiver.try_recv().unwrap();
+        }
+
+        if self.is_simulated {
+            self.move_simulation_frame(self.current_frame, frame, ui);
+
+            if self.is_play_button_on {
+                self.current_frame += 1;
+            }
+
+            if self.current_frame == frames_count - 1 {
+                self.is_play_button_on = false;
+            }
         }
 
         ui.hyperlink("https://github.com/vkabadzhova/equilibrium");
