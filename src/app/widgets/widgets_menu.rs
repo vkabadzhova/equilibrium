@@ -39,6 +39,20 @@ impl Setting for SettingType {
     }
 }
 
+impl SettingType {
+    /// Returns the default value of the given type
+    pub fn to_default(&mut self) {
+        match self {
+            SettingType::Fluid(_) => *self = SettingType::Fluid(FluidWidget::default()),
+            SettingType::Simulation(_) => {
+                *self = SettingType::Simulation(SimulationWidget::default())
+            }
+            SettingType::Viewport(_) => *self = SettingType::Viewport(ViewportWidget::default()),
+            SettingType::Obstacle(_) => *self = SettingType::Obstacle(ObstacleWidget::default()),
+        }
+    }
+}
+
 /// Main window with settings from which the other menus can be pulled out via checkboxes
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(default))]

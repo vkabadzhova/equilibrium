@@ -98,19 +98,20 @@ impl App {
     }
 
     fn render_next_received_img(&mut self, frame: &epi::Frame, ui: &mut egui::Ui) {
-        for i_frame_iter in self.signal_receiver.try_iter() {
+        let current_frame = self.signal_receiver.try_recv().unwrap();
+        self.simulation_progress += 1.0 / self.renderer.fluid.simulation_configs.frames as f32;
+        if current_frame > self.current_frame {
             App::show_image(
-                density_img_path!(&self.renderer.rendered_images_dir, i_frame_iter),
+                density_img_path!(&self.renderer.rendered_images_dir, current_frame),
                 self.get_resolution()
                     .expect("A viewport setting should exsist."),
                 frame,
                 ui,
             );
-            self.simulation_progress += 1.0 / self.renderer.fluid.simulation_configs.frames as f32;
-            self.current_frame = i_frame_iter;
+            self.current_frame = current_frame;
         }
 
-        if self.current_frame == self.renderer.fluid.simulation_configs.frames - 1 {
+        if current_frame == self.renderer.fluid.simulation_configs.frames - 1 {
             self.simulation_progress = 1.0;
         }
 
@@ -299,12 +300,19 @@ impl App {
             ui.separator();
             self.settings_menu.checkboxes(ui);
 
+            ui.separator();
             ui.vertical_centered(|ui| {
+                if ui.button("Back to default values").clicked() {
+                    for el in self.settings_menu.settings_menu.iter_mut() {
+                        el.to_default();
+                    }
+                }
+
                 if ui.button("Organize windows").clicked() {
                     ui.ctx().memory().reset_areas();
                 }
 
-                if ui.button("Close all").clicked() {
+                if ui.button("Close all windows").clicked() {
                     self.settings_menu.close_all();
                 }
             });
