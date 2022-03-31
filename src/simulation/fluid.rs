@@ -7,41 +7,12 @@ use rand::Rng;
 
 use super::obstacle::ObstaclesType;
 
-/// Address the direction in world-directions style
-/// similliar to: mid-point line generation algorithm, etc.
+/// Describes if a certain cell is a wall or not. See [`set_boundaries`].
 #[derive(PartialEq, Eq, Copy, Clone, Hash, Debug)]
 pub enum ContainerWall {
-    /// the side which is parallel to Ox and has lowest x values
-    /// in the coordinate system
-    West,
-    /// All lines which are not parallel to the main axises
-    /// and whose average point's y coordinate is on left of the obstacle's
-    /// horizontal mediana is considered NorthWest.
-    NorthWest,
-    /// the side which is parallel to Ox and has highest y values
-    /// in the coordinate system
-    North,
-    /// All lines which are not parallel to the main axises
-    /// and whose average point's y coordinate is on right of the obstacle's
-    /// horizontal mediana is considered NorthEast.
-    NorthEast,
-    /// the side which is parallel to Oy and has highest x values
-    /// in the coordinate system
-    East,
-    /// All lines which are not parallel to the main axises
-    /// and whose average point's y coordinate is on right of the obstacle's
-    /// horizontal mediana is considered SouthEast.
-    SouthEast,
-    /// the side which is parallel to Ox and has lowest y values
-    /// in the coordinate system
-    South,
-    /// All lines which are not parallel to the main axises
-    /// and whose average point's y coordinate is on left of the obstacle's
-    /// horizontal mediana is considered NorthEast.
-    SouthWest,
-    /// Deafult wall variant. Used for filling the inner cells of an obstacles
+    /// Default wall variant. Used for filling the inner cells of the obstacles
     DefaultWall,
-    /// No wall variant. See [`set_boundaries`].
+    /// Means the cell is accessible for the fluid.
     NoWall,
 }
 

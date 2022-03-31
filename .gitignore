@@ -20,8 +20,9 @@ Cargo.lock
 
 # End of https://www.toptal.com/developers/gitignore/api/rust
 
-# VS Code
+# IDEs 
 .vscode/
+.idea/
 
 # Temporary output
 rendered_images/

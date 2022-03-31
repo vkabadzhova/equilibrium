@@ -15,36 +15,38 @@ use std::sync::mpsc::{Receiver, Sender};
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))]
 pub struct App {
-    #[cfg_attr(feature = "persistence", serde(skip))]
     /// The "id" of the last showed image in the application of a given simulation
     /// in the context of specific simulation
+    #[cfg_attr(feature = "persistence", serde(skip))]
     current_frame: i64,
 
-    #[cfg_attr(feature = "persistence", serde(skip))]
     /// The fluid driver that renders its state in a file
+    #[cfg_attr(feature = "persistence", serde(skip))]
     renderer: Renderer,
 
-    #[cfg_attr(feature = "persistence", serde(skip))]
     /// Is a fluid simulated and ready to be showed
+    #[cfg_attr(feature = "persistence", serde(skip))]
     is_simulated: bool,
 
-    #[cfg_attr(feature = "persistence", serde(skip))]
     /// The progress of the simulation
+    #[cfg_attr(feature = "persistence", serde(skip))]
     simulation_progress: f32,
 
-    #[cfg_attr(feature = "persistence", serde(skip))]
     /// Between-threads receiver, participant in a channel open between the
     /// renderer and the application
+    #[cfg_attr(feature = "persistence", serde(skip))]
     signal_receiver: Receiver<i64>,
 
-    #[cfg_attr(feature = "persistence", serde(skip))]
     /// Collection of all the widgets in the application
+    #[cfg_attr(feature = "persistence", serde(skip))]
     settings_menu: SettingsMenu,
 
-    /// The last showed image is chached.
+    /// The last showed image is cached.
+    #[cfg_attr(feature = "persistence", serde(skip))]
     cached_image: Option<CashedImage>,
 
     /// The play button is on
+    #[cfg_attr(feature = "persistence", serde(skip))]
     is_play_button_on: bool,
 }
 
@@ -83,15 +85,15 @@ impl App {
             && self
                 .cached_image
                 .as_ref()
-                .unwrap()
+                .expect("no cached image available")
                 .consists_of(image_path, zoom_factor)
         {
-            let dimensions = self.cached_image.as_ref().unwrap().dimensions;
+            let cached_image = self
+                .cached_image
+                .as_ref()
+                .expect("no cached_image available");
 
-            ui.image(
-                self.cached_image.as_ref().unwrap().rendered_texture,
-                dimensions,
-            );
+            ui.image(cached_image.rendered_texture, cached_image.dimensions);
             return;
         }
 
@@ -131,7 +133,7 @@ impl App {
                 renderer.simulate(tx);
             });
         })
-        .unwrap();
+        .expect("Couldn't send renderer properly");
         rx
     }
 
@@ -237,6 +239,7 @@ impl App {
             if ui.button("Previous").clicked() {
                 self.current_frame =
                     (self.current_frame - 1) % self.renderer.fluid.simulation_configs.frames;
+
                 if self.current_frame < 0 {
                     self.current_frame = self.renderer.fluid.simulation_configs.frames - 1;
                 }
@@ -286,8 +289,11 @@ impl App {
 
         let frames_count = self.renderer.fluid.simulation_configs.frames;
 
-        if self.current_frame < frames_count - 1 && !self.is_play_button_on && self.is_simulated {
-            self.current_frame = self.signal_receiver.try_recv().unwrap();
+        if self.current_frame < frames_count - 1 && self.is_play_button_on && self.is_simulated {
+            self.current_frame = self
+                .signal_receiver
+                .try_recv()
+                .expect("Sender not available");
         }
 
         if self.is_simulated {
@@ -297,7 +303,7 @@ impl App {
                 self.current_frame += 1;
             }
 
-            if self.current_frame == frames_count - 1 {
+            if self.is_play_button_on && self.current_frame == frames_count - 1 {
                 self.is_play_button_on = false;
             }
         }
