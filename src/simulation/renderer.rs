@@ -10,11 +10,8 @@ use std::sync::mpsc::Sender;
 /// Creates a name of the a rendered density file based on the frame number and
 /// a given directory
 macro_rules! density_img_path {
-    ($rendered_images_dir:expr, $frame_number:expr) => {
-        &($rendered_images_dir.clone().to_owned()
-            + "/density"
-            + &$frame_number.to_string()
-            + ".jpg")
+    ($save_into_dir:expr, $frame_number:expr) => {
+        &($save_into_dir.clone().to_owned() + "/density" + &$frame_number.to_string() + ".jpg")
     };
 }
 
@@ -23,7 +20,7 @@ pub(crate) use density_img_path;
 /// Utility for visualization and interaction with the fluid simulation.
 ///
 /// There are two ways to modify the simulation’s parameters while the simulation is
-/// going: to rerun the simulation from the beginning, or two continue it with
+/// going: to rerun the simulation from the beginning, or to continue it with
 /// the newly added parameters. Internally, there are parameters of the type `next_*_configs`
 /// that are used. In the first case, they are updating the current state of the
 /// renderer live during the simulation (the current state is stored in the
@@ -35,19 +32,20 @@ pub struct Renderer {
     /// The Renderer owns the fluid that it simulates
     pub fluid: Fluid,
 
-    /// The fluid configurations for the next run (either the next initial configs or
-    /// live change of the current (depending on the configs. See the documentation
-    /// of the [`Renderer`] struct)
+    /// Buffered fluid configurations for the next run. The configurations of the fluid are not
+    /// changed while the fluid is being simulated.
     next_fluid_configs: FluidConfigs,
 
-    /// The simulation configurations for the next run (either the next initial configs or
-    /// live change of the current (depending on the configs. See the documentation
-    /// of the [`Renderer`] struct)
+    /// Buffered simulation configurations for the next run. The configurations of the fluid are
+    /// not changed while the fluid is being simulated.
     next_simulation_configs: SimulationConfigs,
 
-    /// The directory in which the rendered images that result from the simulation
-    /// are stored
-    pub rendered_images_dir: String,
+    /// The directory in which the rendered images that result from the simulation are stored.
+    pub save_into_dir: String,
+
+    /// Buffered name for saving directory for the next run. Use when you don't want to change the
+    /// directory in the middle of the previous simulation. Use with [`Renderer::update_configs()`]
+    next_save_into_dir: String,
 
     /// The color of all obstacles. Obstacles cannot be set individual colors.
     pub obstacles_color: eframe::egui::Color32,
@@ -56,9 +54,8 @@ pub struct Renderer {
     /// obstacles, use [`update_obstacles`].
     pub obstacles: Vec<ObstaclesType>,
 
-    /// The obstacles for the next run (either the next initial configs or
-    /// live change of the current (depending on the configs. See the documentation
-    /// of the [`Renderer`] struct)
+    /// Buffered obstacles for the next run. The configurations of the fluid are not changed while
+    /// the fluid is being simulated.
     next_obstacles: Vec<ObstaclesType>,
 }
 
@@ -70,6 +67,8 @@ impl Default for Renderer {
     /// Add default Renderer, containing an obstacle and default [`FluidConfigs`] and [`SimulationConfigs`]
     fn default() -> Self {
         let fluid = Fluid::default();
+        let default_dir = Renderer::make_save_into_dir("rendered_images".to_string());
+
         let mut result = Self {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
@@ -81,7 +80,8 @@ impl Default for Renderer {
                 crate::simulation::obstacle::Rectangle::default(),
             )],
             fluid,
-            rendered_images_dir: Renderer::make_rendered_images_dir(),
+            save_into_dir: default_dir.clone(),
+            next_save_into_dir: default_dir.clone(),
         };
 
         result.mark_fluid_obstacles();
@@ -90,17 +90,18 @@ impl Default for Renderer {
 }
 
 impl Renderer {
-    fn make_rendered_images_dir() -> String {
+    fn make_save_into_dir(dir_name: String) -> String {
         let project_root = project_root::get_project_root()
             .unwrap()
             .to_str()
             .unwrap()
             .to_string();
-        project_root + "/rendered_images"
+        project_root + "/" + &dir_name
     }
 
     /// Creates new Renderer
-    pub fn new(fluid: Fluid, obstacles_color: Color32) -> Renderer {
+    pub fn new(fluid: Fluid, obstacles_color: Color32, images_dir: String) -> Renderer {
+        let save_into_dir = Renderer::make_save_into_dir(images_dir);
         Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
@@ -108,7 +109,8 @@ impl Renderer {
             obstacles: Vec::new(),
             next_obstacles: Vec::new(),
             fluid,
-            rendered_images_dir: Renderer::make_rendered_images_dir(),
+            save_into_dir: save_into_dir.clone(),
+            next_save_into_dir: save_into_dir,
         }
     }
 
@@ -161,13 +163,13 @@ impl Renderer {
             }
         }
 
-        if !std::path::Path::new(&self.rendered_images_dir).exists() {
-            fs::create_dir(&self.rendered_images_dir)
+        if !std::path::Path::new(&self.save_into_dir).exists() {
+            fs::create_dir(&self.save_into_dir)
                 .expect("Error while creating a directory to store the simulation results.");
         }
 
         imgbuf
-            .save(density_img_path!(self.rendered_images_dir, frame_number))
+            .save(density_img_path!(self.save_into_dir, frame_number))
             .expect("Coulnt't save density image");
     }
 
@@ -175,6 +177,7 @@ impl Renderer {
     pub fn simulate(&mut self, tx: Sender<i64>) {
         self.fluid = Fluid::new(self.next_fluid_configs, self.next_simulation_configs);
         self.obstacles = self.next_obstacles.clone();
+        self.save_into_dir = self.next_save_into_dir.clone();
         self.mark_fluid_obstacles();
         for i in 0..self.fluid.simulation_configs.frames {
             if self.fluid.fluid_configs.has_perlin_noise {
@@ -216,7 +219,9 @@ impl Renderer {
                         .collect();
                     self.obstacles_color = obstacle_widget.color;
                 }
-                _ => {}
+                SettingType::Viewport(viewport_widget) => {
+                    self.next_save_into_dir = viewport_widget.save_into_dir.clone();
+                }
             }
         }
     }
@@ -237,7 +242,7 @@ mod tests {
         let simulation_configs = SimulationConfigs::default();
 
         let fluid = Fluid::new(fluid_configs, simulation_configs);
-        let mut renderer = Renderer::new(fluid, Color32::RED);
+        let mut renderer = Renderer::new(fluid, Color32::RED, "rendered_images".to_string());
 
         // assert it is correctly configured for the test
         assert_ne!(renderer.fluid.fluid_configs.diffusion, 0.4212312);

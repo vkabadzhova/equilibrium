@@ -2,14 +2,14 @@ use eframe::egui;
 
 /// Shows off one example of each major type of widget.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct ViewportWidget {
     enabled: bool,
     /// Configurations for the size of the simulation image as regards the size of the central panel
     /// *Note:* in percents
     pub image_resize_factor: u8,
-    /// Configuration for the amount of seconds between frame change for the play button
-    pub play_simulation_speed: f32,
+    /// The name of the directory in which the rendered images will be saved.
+    pub save_into_dir: String,
 }
 
 impl Default for ViewportWidget {
@@ -17,7 +17,7 @@ impl Default for ViewportWidget {
         Self {
             enabled: true,
             image_resize_factor: 50,
-            play_simulation_speed: 0.1,
+            save_into_dir: "rendered_images".to_string(),
         }
     }
 }
@@ -74,12 +74,11 @@ impl ViewportWidget {
             // Field not used, ignore it. Item placed for completeness.
             enabled: _,
             image_resize_factor,
-            play_simulation_speed,
+            save_into_dir,
         } = self;
 
-        ui.label("Rendered image resize factor");
-        //.on_hover_text("Configurations for the size of the simulation image as regards the size of the central panel.
-        //*Note:* in percents");
+        ui.label("Rendered image resize factor")
+        .on_hover_text("Configurations for the size of the simulation image as regards the size of the central panel. *Note:* in percents");
         ui.add(egui::DragValue::new(image_resize_factor).speed(1.0));
         if *image_resize_factor > 100 {
             *image_resize_factor = 100;
@@ -88,12 +87,10 @@ impl ViewportWidget {
         }
         ui.end_row();
 
-        ui.label("Simulation speed on play");
-        //.on_hover_text(" Configuration for the amount of seconds between frame change for the play button");
-        ui.add(egui::DragValue::new(play_simulation_speed).speed(0.01));
-        if *play_simulation_speed < 0.0 {
-            *play_simulation_speed = 0.00;
-        }
+        ui.label("Save into directory:")
+            .on_hover_text("The name of the directory in which the rendered images will be saved.");
+        ui.text_edit_singleline(save_into_dir);
+
         ui.end_row();
     }
 }

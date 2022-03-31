@@ -142,7 +142,7 @@ impl App {
             next_frame as f32 / (self.renderer.fluid.simulation_configs.frames - 1) as f32;
 
         self.show_image(
-            density_img_path!(&self.renderer.rendered_images_dir, next_frame),
+            density_img_path!(&self.renderer.save_into_dir, next_frame),
             frame,
             ui,
         );
