@@ -63,7 +63,7 @@ impl App {
             signal_receiver,
             settings_menu: SettingsMenu::default(),
             cached_image: None,
-            is_play_button_on: false,
+            is_play_button_on: true,
         }
     }
 
