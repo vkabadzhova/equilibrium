@@ -196,14 +196,6 @@ impl epi::App for App {
             .show(ctx, |ui| self.right_panel(ui));
 
         self.settings_menu.windows(ctx);
-
-        if false {
-            egui::Window::new("Window").show(ctx, |ui| {
-                ui.label("Windows can be moved by dragging them.");
-                ui.label("They are automatically sized based on contents.");
-                ui.label("You can turn on resizing and scrolling if you like.");
-            });
-        }
     }
 }
 
