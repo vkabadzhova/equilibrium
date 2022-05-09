@@ -26,7 +26,7 @@ pub struct App {
 
     /// Is a fluid simulated and ready to be showed
     #[cfg_attr(feature = "persistence", serde(skip))]
-    is_simulated: bool,
+    is_simulation_ready: bool,
 
     /// The progress of the simulation
     #[cfg_attr(feature = "persistence", serde(skip))]
@@ -45,9 +45,13 @@ pub struct App {
     #[cfg_attr(feature = "persistence", serde(skip))]
     cached_image: Option<CashedImage>,
 
-    /// The play button is on
+    /// The play button has been clicked, and now the simulation should be displayed frame by frame
     #[cfg_attr(feature = "persistence", serde(skip))]
     is_play_button_on: bool,
+
+    /// The simulation is currently in progress
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    is_simulation_in_process: bool,
 }
 
 impl App {
@@ -58,12 +62,13 @@ impl App {
         Self {
             current_frame: 0,
             renderer,
-            is_simulated: false,
+            is_simulation_ready: false,
             simulation_progress: 1.0,
             signal_receiver,
             settings_menu: SettingsMenu::default(),
             cached_image: None,
             is_play_button_on: true,
+            is_simulation_in_process: false,
         }
     }
 
@@ -98,7 +103,7 @@ impl App {
         }
 
         let image = image::open(image_path)
-            .expect("Couldn't open image")
+            .expect(&("Couldn't open image ".to_owned() + image_path))
             .resize(
                 (ui.available_width() * (zoom_factor as f32 / 100.0)) as u32,
                 (ui.available_height() * (zoom_factor as f32 / 100.0)) as u32,
@@ -146,7 +151,6 @@ impl App {
             frame,
             ui,
         );
-        self.current_frame = next_frame;
 
         frame.request_repaint();
     }
@@ -245,19 +249,17 @@ impl App {
 
         if ui.button("Play simulation").clicked() {
             self.is_play_button_on = true;
-
-            if self.is_simulated {
-                self.current_frame = 0;
-            }
+            self.current_frame = 0;
         }
 
         ui.separator();
 
         if ui.button("Simulate fluid").clicked() {
-            self.is_simulated = true;
+            self.is_simulation_ready = true;
             self.simulation_progress = 0.0;
             self.current_frame = 0;
             self.signal_receiver = App::render(&mut self.renderer);
+            self.is_simulation_in_process = true;
         }
 
         ui.label("Simulation Progress:");
@@ -281,22 +283,23 @@ impl App {
 
         let frames_count = self.renderer.fluid.simulation_configs.frames;
 
-        if self.current_frame < frames_count - 1 && self.is_play_button_on && self.is_simulated {
-            self.current_frame = self
-                .signal_receiver
-                .try_recv()
-                .expect("Sender not available");
-        }
-
-        if self.is_simulated {
-            self.move_simulation_frame(self.current_frame, frame, ui);
-
-            if self.is_play_button_on {
+        if self.current_frame < frames_count - 1 && self.is_play_button_on {
+            if self.is_simulation_in_process {
+                self.current_frame = self
+                    .signal_receiver
+                    .try_recv()
+                    .expect("Sender not available");
+            } else {
                 self.current_frame += 1;
             }
+        }
 
-            if self.is_play_button_on && self.current_frame == frames_count - 1 {
+        if self.is_simulation_ready {
+            self.move_simulation_frame(self.current_frame, frame, ui);
+
+            if self.current_frame == frames_count - 1 {
                 self.is_play_button_on = false;
+                self.is_simulation_in_process = false;
             }
         }
 
