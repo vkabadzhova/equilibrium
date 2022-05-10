@@ -1,5 +1,6 @@
 use super::fluid::ContainerWall;
 use super::obstacle::ObstaclesType;
+use super::renderer_helpers::CurrentSimulation;
 use crate::app::widgets::widgets_menu::SettingType;
 use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use crate::simulation::fluid::Fluid;
@@ -57,6 +58,12 @@ pub struct Renderer {
     /// Buffered obstacles for the next run. The configurations of the fluid are not changed while
     /// the fluid is being simulated.
     next_obstacles: Vec<ObstaclesType>,
+
+    /// Contains the state of the current simulation step.
+    pub current_simulation: CurrentSimulation,
+
+    /// Listens for the current simulation signal, in order to render the simulation into an image
+    pub rendering_listener: RenderingListener,
 }
 
 // Safety: No one besides us owns obstacle, so we can safely transfer
@@ -111,6 +118,8 @@ impl Renderer {
             fluid,
             save_into_dir: save_into_dir.clone(),
             next_save_into_dir: save_into_dir,
+            current_simulation: CurrentSimulation::default(),
+            rendering_listener: RenderingListener::default(),
         }
     }
 
@@ -224,6 +233,30 @@ impl Renderer {
                 }
             }
         }
+    }
+
+    /// Runs the simulation, and then renders the result. Internally, it fires several more
+    /// threads: one to simulate the fluid, and another one to render the result.
+    /// As a result a [`std::sync::Receiver<i64>`] is returned, by which a signal for every new
+    /// render will be sent over.
+    pub fn render(&self) {
+        let (simulation_tx, simulation_rx): (Sender<FluidStep>, Receiver<FluidStep>) =
+            mpsc::channel();
+
+        // TODO: prep current_simulation with correct values
+
+        let current_simulation = renderer.current_simulation.clone();
+        let simulation_handler = std::thread::spawn(move || {
+            current_simulation.simulate(simulation_tx);
+        });
+
+        let rendering_listener = renderer.rendering_listener.clone();
+        let max_frames = renderer.fluid.simulation_configs.frames;
+        let rendering_handler = std::thread::spawn(move || {
+            rendering_listener.listen(max_frames, simulation_rx);
+        });
+
+        (rx, simulation_handler)
     }
 }
 

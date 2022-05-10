@@ -47,6 +47,7 @@ macro_rules! idx {
 ///              |  \ the fluid in that exact cell
 ///              ---->
 ///            velocities_x
+#[derive(Clone)]
 pub struct Fluid {
     /// general configurations for the simulated fluid
     pub fluid_configs: FluidConfigs,

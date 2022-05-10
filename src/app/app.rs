@@ -3,6 +3,7 @@ use crate::app::app::egui::ScrollArea;
 use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
 use crate::simulation::renderer::density_img_path;
 use crate::simulation::renderer::Renderer;
+use crate::simulation::renderer_helpers::FluidStep;
 use eframe::egui::global_dark_light_mode_switch;
 use eframe::{egui, epi};
 use image::imageops::FilterType::Triangle;
@@ -134,16 +135,6 @@ impl App {
             dimensions: size,
             rendered_texture: texture_id,
         });
-    }
-
-    fn render(renderer: &mut Renderer) -> (Receiver<i64>, JoinHandle<()>) {
-        let (tx, rx): (Sender<i64>, Receiver<i64>) = mpsc::channel();
-
-        let handler = std::thread::spawn(move || {
-            renderer.simulate(tx);
-        });
-
-        (rx, handler)
     }
 
     fn move_simulation_frame(&mut self, next_frame: i64, frame: &epi::Frame, ui: &mut egui::Ui) {

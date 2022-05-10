@@ -12,7 +12,7 @@ pub mod renderer;
 /// the renderer. The renderer is one for the whole program. The current structure is developed for
 /// syncronization purposes, when the simulation of the fluid behaviour should be delegated to
 /// another thread.
-pub mod current_simulation;
+pub mod renderer_helpers;
 
 /// Various obstacles defined by a vector with their points can be put into the simulation,
 /// as long as the obstacle's points are inside the fluid's container. The fluid will avoid those.
