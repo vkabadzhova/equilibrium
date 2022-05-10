@@ -3,14 +3,12 @@ use crate::app::app::egui::ScrollArea;
 use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
 use crate::simulation::renderer::density_img_path;
 use crate::simulation::renderer::Renderer;
-use crate::simulation::renderer_helpers::FluidStep;
 use eframe::egui::global_dark_light_mode_switch;
 use eframe::{egui, epi};
 use image::imageops::FilterType::Triangle;
 use image::GenericImageView;
 use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
-use std::thread::JoinHandle;
+use std::sync::mpsc::Receiver;
 
 /// Entry-point for the fluid simulation application
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
@@ -37,11 +35,6 @@ pub struct App {
     /// renderer and the application
     #[cfg_attr(feature = "persistence", serde(skip))]
     signal_receiver: Receiver<i64>,
-
-    /// Handler for the renderer's thread, which is started every when the "Simulate fluid" button
-    /// is triggered.
-    #[cfg_attr(feature = "persistence", serde(skip))]
-    renderer_thread_handler: JoinHandle<()>,
 
     /// Collection of all the widgets in the application
     #[cfg_attr(feature = "persistence", serde(skip))]
@@ -71,7 +64,6 @@ impl App {
             is_simulation_ready: false,
             simulation_progress: 1.0,
             signal_receiver,
-            renderer_thread_handler: std::thread::spawn(|| {}),
             settings_menu: SettingsMenu::default(),
             cached_image: None,
             is_play_button_on: true,
@@ -254,10 +246,7 @@ impl App {
             self.simulation_progress = 0.0;
             self.current_frame = 0;
 
-            let (thread_receiver, thread_handler) = App::render(&mut self.renderer);
-            self.signal_receiver = thread_receiver;
-            self.renderer_thread_handler = thread_handler;
-
+            self.signal_receiver = self.renderer.render();
             self.is_simulation_in_process = true;
         }
 
@@ -299,9 +288,6 @@ impl App {
             if self.current_frame == frames_count - 1 {
                 self.is_play_button_on = false;
                 self.is_simulation_in_process = false;
-                self.renderer_thread_handler
-                    .join()
-                    .expect("There was a problem when joining the renderer's thread");
             }
         }
 

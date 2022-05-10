@@ -24,7 +24,7 @@ pub struct FluidStep {
 /// Performs the simulation of the fluid. It sends a
 /// [`FluidStep`](crate::simulation::current_simulation::FluidStep) over a [`std::sync::mpsc`]
 /// channel directly to the [`Renderer`].
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct CurrentSimulation {
     /// The Renderer owns the fluid that it simulates
     pub fluid: Fluid,
@@ -42,20 +42,32 @@ pub struct CurrentSimulation {
     pub obstacles: Vec<ObstaclesType>,
 }
 
+impl Default for CurrentSimulation {
+    fn default() -> Self {
+        Self {
+            fluid: Fluid::default(),
+            fluid_configs: FluidConfigs::default(),
+            simulation_configs: SimulationConfigs::default(),
+            obstacles: vec![ObstaclesType::Rectangle(
+                crate::simulation::obstacle::Rectangle::default(),
+            )],
+        }
+    }
+}
+
 impl CurrentSimulation {
     /// Runs the fluid simulation
     pub fn simulate(&mut self, tx: Sender<FluidStep>) {
-        self.fluid = Fluid::new(self.fluid_configs, self.simulation_configs);
         self.mark_fluid_obstacles();
         for i in 0..self.fluid.simulation_configs.frames {
             if self.fluid.fluid_configs.has_perlin_noise {
                 self.fluid.add_noise();
             }
+
             self.fluid.step();
 
-            //TODO: self.render_density(i); in renderer
             tx.send(FluidStep {
-                fluid: self.fluid,
+                fluid: self.fluid.clone(),
                 frame_number: i,
             })
             .unwrap();
@@ -64,7 +76,7 @@ impl CurrentSimulation {
 
     /// After altering the obstacles list. Refresh the fluid's configuration regarding its
     /// obstacles.
-    pub fn mark_fluid_obstacles(&mut self) {
+    fn mark_fluid_obstacles(&mut self) {
         for obstacle in self.obstacles.iter_mut() {
             self.fluid.fill_obstacle(obstacle);
         }
@@ -73,17 +85,36 @@ impl CurrentSimulation {
 
 /// Listens for a signal to render the image with the next fluid state. After that it sends a
 /// signal to the [`App`](crate::app::App) to display it.
-#[derive(Default)]
+#[derive(Clone)]
 pub struct RenderingListener {
     /// The directory in which the rendered images that result from the simulation are stored.
-    save_into_dir: String,
+    pub save_into_dir: String,
 
     /// The color of all obstacles. Obstacles cannot be set individual colors.
-    obstacles_color: eframe::egui::Color32,
+    pub obstacles_color: eframe::egui::Color32,
+}
+
+impl Default for RenderingListener {
+    fn default() -> Self {
+        Self {
+            save_into_dir: RenderingListener::make_save_into_dir("rendered_images"),
+            obstacles_color: eframe::egui::Color32::RED,
+        }
+    }
 }
 
 impl RenderingListener {
-    pub fn render_image(&self, fluid_step: FluidStep) {
+    /// Creates the default directory in which the result images will be saved.
+    pub fn make_save_into_dir(dir_name: &str) -> String {
+        let project_root = project_root::get_project_root()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+        project_root + "/" + &dir_name
+    }
+
+    fn render_image(&self, fluid_step: FluidStep) {
         let fluid = fluid_step.fluid;
 
         let world_rgba = [
@@ -146,12 +177,23 @@ impl RenderingListener {
             .expect("Coulnt't save density image");
     }
 
-    pub fn listen(&self, max_frames: u32, rx: Receiver<FluidStep>) {
-        for i in 0..max_frames {
+    /// Listens for a signal from [`CurrentSimulation`] that a frame is ready, and then renders it.
+    pub fn listen(
+        &self,
+        max_frames: i64,
+        simulation_rx: Receiver<FluidStep>,
+        rendering_tx: Sender<i64>,
+    ) {
+        for i in 0..max_frames - 1 {
             self.render_image(
-                rx.recv()
+                simulation_rx
+                    .recv()
                     .expect("Problem occured while listening for FluidStep"),
             );
+
+            rendering_tx
+                .send(i)
+                .expect("Could not properly send current frame number through rendering_tx");
         }
     }
 }

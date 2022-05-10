@@ -1,12 +1,11 @@
-use super::fluid::ContainerWall;
 use super::obstacle::ObstaclesType;
-use super::renderer_helpers::CurrentSimulation;
+use super::renderer_helpers::{CurrentSimulation, FluidStep, RenderingListener};
 use crate::app::widgets::widgets_menu::SettingType;
 use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use crate::simulation::fluid::Fluid;
 use eframe::egui::Color32;
-use std::fs;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
 
 /// Creates a name of the a rendered density file based on the frame number and
 /// a given directory
@@ -74,9 +73,9 @@ impl Default for Renderer {
     /// Add default Renderer, containing an obstacle and default [`FluidConfigs`] and [`SimulationConfigs`]
     fn default() -> Self {
         let fluid = Fluid::default();
-        let default_dir = Renderer::make_save_into_dir("rendered_images".to_string());
+        let default_dir = RenderingListener::make_save_into_dir("rendered_images");
 
-        let mut result = Self {
+        let result = Self {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
             obstacles_color: Color32::RED,
@@ -89,26 +88,18 @@ impl Default for Renderer {
             fluid,
             save_into_dir: default_dir.clone(),
             next_save_into_dir: default_dir.clone(),
+            current_simulation: CurrentSimulation::default(),
+            rendering_listener: RenderingListener::default(),
         };
 
-        result.mark_fluid_obstacles();
         result
     }
 }
 
 impl Renderer {
-    fn make_save_into_dir(dir_name: String) -> String {
-        let project_root = project_root::get_project_root()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-        project_root + "/" + &dir_name
-    }
-
     /// Creates new Renderer
     pub fn new(fluid: Fluid, obstacles_color: Color32, images_dir: String) -> Renderer {
-        let save_into_dir = Renderer::make_save_into_dir(images_dir);
+        let save_into_dir = RenderingListener::make_save_into_dir(&images_dir);
         Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
@@ -120,90 +111,6 @@ impl Renderer {
             next_save_into_dir: save_into_dir,
             current_simulation: CurrentSimulation::default(),
             rendering_listener: RenderingListener::default(),
-        }
-    }
-
-    fn render_density(&self, frame_number: i64) {
-        let world_rgba = [
-            self.fluid.fluid_configs.world_color.r(),
-            self.fluid.fluid_configs.world_color.g(),
-            self.fluid.fluid_configs.world_color.b(),
-            self.fluid.fluid_configs.world_color.a(),
-        ];
-
-        let fluid_rgba = [
-            self.fluid.fluid_configs.fluid_color.r(),
-            self.fluid.fluid_configs.fluid_color.g(),
-            self.fluid.fluid_configs.fluid_color.b(),
-            self.fluid.fluid_configs.fluid_color.a(),
-        ];
-
-        let obstacles_rgba = [
-            self.obstacles_color.r(),
-            self.obstacles_color.g(),
-            self.obstacles_color.b(),
-            self.obstacles_color.a(),
-        ];
-
-        let mut imgbuf = image::ImageBuffer::new(
-            self.fluid.simulation_configs.size,
-            self.fluid.simulation_configs.size,
-        );
-
-        for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-            let density = self.fluid.density[idx!(x, y, self.fluid.simulation_configs.size)];
-            let cell_type = self.fluid.cells_type[idx!(x, y, self.fluid.simulation_configs.size)];
-            if cell_type == ContainerWall::DefaultWall {
-                *pixel = image::Rgba([
-                    obstacles_rgba[0],
-                    obstacles_rgba[1],
-                    obstacles_rgba[2],
-                    obstacles_rgba[3],
-                ]);
-            } else if density != 0.0 && cell_type == ContainerWall::NoWall {
-                *pixel = image::Rgba([
-                    (density * fluid_rgba[0] as f32) as u8,
-                    fluid_rgba[1],
-                    density as u8,
-                    1,
-                ]);
-            } else {
-                *pixel = image::Rgba(world_rgba);
-            }
-        }
-
-        if !std::path::Path::new(&self.save_into_dir).exists() {
-            fs::create_dir(&self.save_into_dir)
-                .expect("Error while creating a directory to store the simulation results.");
-        }
-
-        imgbuf
-            .save(density_img_path!(self.save_into_dir, frame_number))
-            .expect("Coulnt't save density image");
-    }
-
-    /// Runs the fluid simulation
-    pub fn simulate(&mut self, tx: Sender<i64>) {
-        self.fluid = Fluid::new(self.next_fluid_configs, self.next_simulation_configs);
-        self.obstacles = self.next_obstacles.clone();
-        self.save_into_dir = self.next_save_into_dir.clone();
-        self.mark_fluid_obstacles();
-        for i in 0..self.fluid.simulation_configs.frames {
-            if self.fluid.fluid_configs.has_perlin_noise {
-                self.fluid.add_noise();
-            }
-            self.fluid.step();
-
-            self.render_density(i);
-            tx.send(i).unwrap();
-        }
-    }
-
-    /// After altering the obstacles list. Refresh the fluid's configuration regarding its
-    /// obstacles.
-    pub fn mark_fluid_obstacles(&mut self) {
-        for obstacle in self.obstacles.iter_mut() {
-            self.fluid.fill_obstacle(obstacle);
         }
     }
 
@@ -239,24 +146,35 @@ impl Renderer {
     /// threads: one to simulate the fluid, and another one to render the result.
     /// As a result a [`std::sync::Receiver<i64>`] is returned, by which a signal for every new
     /// render will be sent over.
-    pub fn render(&self) {
+    pub fn render(&mut self) -> Receiver<i64> {
         let (simulation_tx, simulation_rx): (Sender<FluidStep>, Receiver<FluidStep>) =
             mpsc::channel();
 
-        // TODO: prep current_simulation with correct values
+        self.prepare_simulation();
 
-        let current_simulation = renderer.current_simulation.clone();
+        let mut current_simulation = self.current_simulation.clone();
         let simulation_handler = std::thread::spawn(move || {
             current_simulation.simulate(simulation_tx);
         });
 
-        let rendering_listener = renderer.rendering_listener.clone();
-        let max_frames = renderer.fluid.simulation_configs.frames;
+        let rendering_listener = self.rendering_listener.clone();
+        let max_frames = self.fluid.simulation_configs.frames;
+
+        let (rendering_tx, rendering_rx): (Sender<i64>, Receiver<i64>) = mpsc::channel();
+
         let rendering_handler = std::thread::spawn(move || {
-            rendering_listener.listen(max_frames, simulation_rx);
+            rendering_listener.listen(max_frames, simulation_rx, rendering_tx);
         });
 
-        (rx, simulation_handler)
+        rendering_rx
+    }
+
+    fn prepare_simulation(&mut self) {
+        self.current_simulation.fluid =
+            Fluid::new(self.next_fluid_configs, self.next_simulation_configs);
+
+        self.current_simulation.obstacles = self.next_obstacles.clone();
+        self.rendering_listener.save_into_dir = self.next_save_into_dir.clone();
     }
 }
 
