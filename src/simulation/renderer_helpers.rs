@@ -184,12 +184,10 @@ impl RenderingListener {
         simulation_rx: Receiver<FluidStep>,
         rendering_tx: Sender<i64>,
     ) {
-        for i in 0..max_frames - 1 {
-            self.render_image(
-                simulation_rx
-                    .recv()
-                    .expect("Problem occured while listening for FluidStep"),
-            );
+        for i in 0..max_frames {
+            self.render_image(simulation_rx.recv().expect(
+                "Simulation sender has been disconnected. Cannot listen through RenderingListener",
+            ));
 
             rendering_tx
                 .send(i)

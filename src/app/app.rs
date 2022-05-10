@@ -80,27 +80,29 @@ impl App {
         None
     }
 
-    fn show_image(&mut self, image_path: &str, frame: &epi::Frame, ui: &mut egui::Ui) {
-        let zoom_factor = self
-            .get_zoom_factor()
-            .expect("A viewport setting should exsist.");
-
-        if self.cached_image.is_some()
-            && self
-                .cached_image
-                .as_ref()
-                .expect("no cached image available")
-                .consists_of(image_path, zoom_factor)
-        {
-            let cached_image = self
-                .cached_image
-                .as_ref()
-                .expect("no cached_image available");
-
-            ui.image(cached_image.rendered_texture, cached_image.dimensions);
-            return;
+    /// Shows the cached image if it should. This is a helper function of [`Self::show_image()`].
+    fn show_cached_image_in_ui(
+        image: &CashedImage,
+        path: &str,
+        zoom_factor: u8,
+        ui: &mut egui::Ui,
+    ) -> Result<(), ()> {
+        if !image.has_changed && image.consists_of(path, zoom_factor) {
+            ui.image(image.rendered_texture, image.dimensions);
+            return Ok(());
         }
+        Err(())
+    }
 
+    /// Generates a new image, shows it in the ui, and saves it as a cached image. This is a helper
+    /// function of [`Self::show_image()`].
+    fn generate_cached_image(
+        &mut self,
+        image_path: &str,
+        zoom_factor: u8,
+        frame: &epi::Frame,
+        ui: &mut egui::Ui,
+    ) {
         let image = image::open(image_path)
             .expect(&("Couldn't open image ".to_owned() + image_path))
             .resize(
@@ -126,7 +128,30 @@ impl App {
             zoom_factor,
             dimensions: size,
             rendered_texture: texture_id,
+            has_changed: false,
         });
+    }
+
+    /// Shows the image with the given path in the ui, by either taking it from the cached image,
+    /// or by generating it if it is not cached yet.
+    fn show_image(&mut self, image_path: &str, frame: &epi::Frame, ui: &mut egui::Ui) {
+        let zoom_factor = self
+            .get_zoom_factor()
+            .expect("A viewport setting should exsist.");
+
+        let mut should_update_cached_image = false;
+
+        match &self.cached_image {
+            Some(image) => {
+                should_update_cached_image =
+                    Self::show_cached_image_in_ui(image, image_path, zoom_factor, ui).is_err();
+            }
+            None => self.generate_cached_image(image_path, zoom_factor, frame, ui),
+        }
+
+        if should_update_cached_image {
+            self.generate_cached_image(image_path, zoom_factor, frame, ui);
+        }
     }
 
     fn move_simulation_frame(&mut self, next_frame: i64, frame: &epi::Frame, ui: &mut egui::Ui) {
@@ -276,7 +301,7 @@ impl App {
                 self.current_frame = self
                     .signal_receiver
                     .try_recv()
-                    .expect("Sender not available");
+                    .unwrap_or(self.current_frame);
             } else {
                 self.current_frame += 1;
             }
