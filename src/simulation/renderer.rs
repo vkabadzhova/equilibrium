@@ -124,7 +124,9 @@ impl Renderer {
                     self.obstacles_color = obstacle_widget.color;
                 }
                 SettingType::Viewport(viewport_widget) => {
-                    self.next_save_into_dir = viewport_widget.save_into_dir.clone();
+                    self.next_save_into_dir = RenderingListener::make_save_into_dir(
+                        &viewport_widget.save_into_dir.clone(),
+                    );
                 }
             }
         }

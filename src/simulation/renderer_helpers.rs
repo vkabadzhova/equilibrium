@@ -1,6 +1,7 @@
 use crate::simulation::fluid::ContainerWall;
 use crate::simulation::fluid::Fluid;
 use crate::simulation::obstacle::ObstaclesType;
+use simplelog::*;
 use std::fs;
 use std::sync::mpsc::{Receiver, Sender};
 
@@ -62,6 +63,11 @@ impl CurrentSimulation {
                 frame_number: i,
             })
             .unwrap();
+
+            simplelog::debug!(
+                "CurrentSimulation: sent a signal that a frame {} is ready",
+                i
+            );
         }
     }
 
@@ -107,6 +113,10 @@ impl RenderingListener {
 
     /// Creates the file where the result image is rendered.
     fn render_image(&self, fluid_step: FluidStep) {
+        simplelog::debug!(
+            "RenderingListener: Received a signal that a frame is ready! Starting to render; Saving into: {}",
+            density_img_path!(self.save_into_dir, fluid_step.frame_number)
+        );
         let fluid = fluid_step.fluid;
 
         let world_rgba = [
@@ -184,6 +194,8 @@ impl RenderingListener {
             rendering_tx
                 .send(i)
                 .expect("Could not properly send current frame number through rendering_tx");
+
+            simplelog::debug!("RenderingListener: frame {} is rendered!", i);
         }
     }
 }

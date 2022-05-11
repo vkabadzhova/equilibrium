@@ -7,6 +7,7 @@ use eframe::egui::global_dark_light_mode_switch;
 use eframe::{egui, epi};
 use image::imageops::FilterType::Triangle;
 use image::GenericImageView;
+use simplelog::*;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 
@@ -22,10 +23,6 @@ pub struct App {
     /// The fluid driver that renders its state in a file
     #[cfg_attr(feature = "persistence", serde(skip))]
     renderer: Renderer,
-
-    /// Is a fluid simulated and ready to be showed
-    #[cfg_attr(feature = "persistence", serde(skip))]
-    is_simulation_ready: bool,
 
     /// The progress of the simulation
     #[cfg_attr(feature = "persistence", serde(skip))]
@@ -61,12 +58,11 @@ impl App {
         Self {
             current_frame: 0,
             renderer,
-            is_simulation_ready: false,
             simulation_progress: 1.0,
             signal_receiver,
             settings_menu: SettingsMenu::default(),
             cached_image: None,
-            is_play_button_on: true,
+            is_play_button_on: false,
             is_simulation_in_process: false,
         }
     }
@@ -157,14 +153,22 @@ impl App {
 
     /// Displays the next frame of the simulation in the central panel
     fn move_simulation_frame(&mut self, next_frame: i64, frame: &epi::Frame, ui: &mut egui::Ui) {
+        let image_path =
+            density_img_path!(&self.renderer.rendering_listener.save_into_dir, next_frame);
+        simplelog::debug!(
+            "Reading from path: {}, save_into_dir: {}",
+            image_path,
+            self.renderer.rendering_listener.save_into_dir
+        );
+
+        if image::open(image_path).is_err() {
+            return;
+        }
+
         self.simulation_progress =
             next_frame as f32 / (self.renderer.fluid.simulation_configs.frames - 1) as f32;
 
-        self.show_image(
-            density_img_path!(&self.renderer.save_into_dir, next_frame),
-            frame,
-            ui,
-        );
+        self.show_image(&image_path, frame, ui);
 
         frame.request_repaint();
     }
@@ -269,12 +273,12 @@ impl App {
         ui.separator();
 
         if ui.button("Simulate fluid").clicked() {
-            self.is_simulation_ready = true;
             self.simulation_progress = 0.0;
             self.current_frame = 0;
 
             self.signal_receiver = self.renderer.render();
             self.is_simulation_in_process = true;
+            self.is_play_button_on = true;
         }
 
         ui.label("Simulation Progress:");
@@ -300,16 +304,21 @@ impl App {
 
         if self.current_frame < frames_count - 1 && self.is_play_button_on {
             if self.is_simulation_in_process {
+                let last_frame = self.current_frame;
                 self.current_frame = self
                     .signal_receiver
                     .try_recv()
                     .unwrap_or(self.current_frame);
+
+                if last_frame != self.current_frame {
+                    simplelog::debug!("------------- App: signal received!");
+                }
             } else {
                 self.current_frame += 1;
             }
         }
 
-        if self.is_simulation_ready {
+        if self.is_play_button_on {
             self.move_simulation_frame(self.current_frame, frame, ui);
 
             if self.current_frame == frames_count - 1 {
