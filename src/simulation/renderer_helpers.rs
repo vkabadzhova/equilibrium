@@ -12,6 +12,8 @@ macro_rules! density_img_path {
     };
 }
 
+pub(crate) use density_img_path;
+
 /// Saves the state of the current step of the fluid. The purpose of this structure is to be sent
 /// over from [`CurrentSimulation`](crate::simulation::renderer_helpers::CurrentSimulation) to
 /// the [`Renderer`](crate::simulation::renderer::Renderer).

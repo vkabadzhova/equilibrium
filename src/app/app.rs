@@ -1,8 +1,8 @@
 use super::cached_image::CachedImage;
 use crate::app::app::egui::ScrollArea;
 use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
-use crate::simulation::renderer::density_img_path;
 use crate::simulation::renderer::Renderer;
+use crate::simulation::renderer_helpers::density_img_path;
 use eframe::egui::global_dark_light_mode_switch;
 use eframe::{egui, epi};
 use image::imageops::FilterType::Triangle;

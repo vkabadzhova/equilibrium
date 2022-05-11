@@ -7,16 +7,6 @@ use eframe::egui::Color32;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 
-/// Creates a name of the a rendered density file based on the frame number and
-/// a given directory
-macro_rules! density_img_path {
-    ($save_into_dir:expr, $frame_number:expr) => {
-        &($save_into_dir.clone().to_owned() + "/density" + &$frame_number.to_string() + ".jpg")
-    };
-}
-
-pub(crate) use density_img_path;
-
 /// Utility for visualization and interaction with the fluid simulation.
 ///
 /// There are two ways to modify the simulation’s parameters while the simulation is
