@@ -185,10 +185,16 @@ impl App {
 
         if self.is_simulation_in_process {
             if self.current_frame < frames_count - 1 {
+                let last_frame = self.current_frame;
+
                 self.current_frame = self
                     .signal_receiver
                     .try_recv()
                     .unwrap_or(self.current_frame);
+
+                if last_frame != self.current_frame {
+                    self.is_simulation_ready = true;
+                }
             }
 
             frame.request_repaint();
@@ -334,7 +340,9 @@ impl App {
             self.manage_next_frame(frame);
         }
 
-        self.move_simulation_frame(self.current_frame, frame, ui);
+        if self.is_simulation_ready {
+            self.move_simulation_frame(self.current_frame, frame, ui);
+        }
 
         ui.hyperlink("https://github.com/vkabadzhova/equilibrium");
         ui.add(egui::github_link_file!(
