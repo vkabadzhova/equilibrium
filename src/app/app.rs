@@ -177,6 +177,29 @@ impl App {
 
         frame.request_repaint();
     }
+
+    /// Manages the next frame - either takes it from a channel open between the renderer and the
+    /// applicaiton, or directly increments the current_frame.
+    fn manage_next_frame(&mut self) {
+        let frames_count = self.renderer.fluid.simulation_configs.frames;
+
+        if self.is_simulation_in_process {
+            if self.current_frame < frames_count - 1 {
+                self.current_frame = self
+                    .signal_receiver
+                    .try_recv()
+                    .unwrap_or(self.current_frame);
+            }
+        } else {
+            self.current_frame += 1;
+        }
+
+        if self.current_frame == frames_count - 1 {
+            self.is_play_button_on = false;
+            self.is_simulation_in_process = false;
+            self.is_simulation_ready = true;
+        }
+    }
 }
 
 impl epi::App for App {
@@ -305,33 +328,11 @@ impl App {
     fn central_panel(&mut self, ui: &mut egui::Ui, frame: &epi::Frame) {
         ui.heading("Welcome to the Equilibrium Fluid Simulator!");
 
-        let frames_count = self.renderer.fluid.simulation_configs.frames;
-
-        if self.current_frame < frames_count - 1 && self.is_play_button_on {
-            if self.is_simulation_in_process {
-                let last_frame = self.current_frame;
-                self.current_frame = self
-                    .signal_receiver
-                    .try_recv()
-                    .unwrap_or(self.current_frame);
-
-                if last_frame != self.current_frame {
-                    simplelog::debug!("------------- App: signal received!");
-                }
-            } else {
-                self.current_frame += 1;
-            }
+        if self.is_play_button_on {
+            self.manage_next_frame();
         }
 
-        if self.is_play_button_on || self.is_simulation_ready {
-            self.move_simulation_frame(self.current_frame, frame, ui);
-
-            if self.current_frame == frames_count - 1 {
-                self.is_play_button_on = false;
-                self.is_simulation_in_process = false;
-                self.is_simulation_ready = true;
-            }
-        }
+        self.move_simulation_frame(self.current_frame, frame, ui);
 
         ui.hyperlink("https://github.com/vkabadzhova/equilibrium");
         ui.add(egui::github_link_file!(
