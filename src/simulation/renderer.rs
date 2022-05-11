@@ -56,10 +56,6 @@ pub struct Renderer {
     pub rendering_listener: RenderingListener,
 }
 
-// Safety: No one besides us owns obstacle, so we can safely transfer
-// it to another thread
-unsafe impl Send for Renderer {}
-
 impl Default for Renderer {
     /// Add default Renderer, containing an obstacle and default [`FluidConfigs`] and [`SimulationConfigs`]
     fn default() -> Self {
