@@ -37,8 +37,12 @@ pub struct Renderer {
     /// directory in the middle of the previous simulation. Use with [`Renderer::update_configs()`]
     next_save_into_dir: String,
 
-    /// The color of all obstacles. Obstacles cannot be set individual colors.
+    /// The color of all obstacles. Individual obstacles cannot have different colors.
     pub obstacles_color: eframe::egui::Color32,
+
+    /// Buffered color for the obstacles. The configurations of the fluid are not changed while
+    /// the simulation is running.
+    next_obstacles_color: eframe::egui::Color32,
 
     /// Collection of all the obstacles. To update the fluid's behaviour to correspond to the
     /// obstacles, use [`Renderer::update_configs()`].
@@ -69,6 +73,7 @@ impl Default for Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
             obstacles_color: Color32::RED,
+            next_obstacles_color: Color32::RED,
             obstacles: vec![ObstaclesType::Rectangle(
                 crate::simulation::obstacle::Rectangle::default(),
             )],
@@ -92,6 +97,7 @@ impl Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
             obstacles_color,
+            next_obstacles_color: obstacles_color,
             obstacles: Vec::new(),
             next_obstacles: Vec::new(),
             fluid,
@@ -121,7 +127,7 @@ impl Renderer {
                         .cloned()
                         .map(|el| el.obstacle)
                         .collect();
-                    self.obstacles_color = obstacle_widget.color;
+                    self.next_obstacles_color = obstacle_widget.color;
                 }
                 SettingType::Viewport(viewport_widget) => {
                     self.next_save_into_dir = RenderingListener::make_save_into_dir(
@@ -161,11 +167,15 @@ impl Renderer {
 
     /// Prepares the next simulation by creating new instances of all the needed components
     fn prepare_simulation(&mut self) {
-        self.current_simulation.fluid =
-            Fluid::new(self.next_fluid_configs, self.next_simulation_configs);
+        self.current_simulation = CurrentSimulation {
+            fluid: Fluid::new(self.next_fluid_configs, self.next_simulation_configs),
+            obstacles: self.next_obstacles.clone(),
+        };
 
-        self.current_simulation.obstacles = self.next_obstacles.clone();
-        self.rendering_listener.save_into_dir = self.next_save_into_dir.clone();
+        self.rendering_listener = RenderingListener {
+            save_into_dir: self.next_save_into_dir.clone(),
+            obstacles_color: self.next_obstacles_color,
+        };
     }
 }
 
