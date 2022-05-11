@@ -51,7 +51,7 @@ pub struct Renderer {
     pub obstacles_color: eframe::egui::Color32,
 
     /// Collection of all the obstacles. To update the fluid's behaviour to correspond to the
-    /// obstacles, use [`update_obstacles`].
+    /// obstacles, use [`Renderer::update_configs()`].
     pub obstacles: Vec<ObstaclesType>,
 
     /// Buffered obstacles for the next run. The configurations of the fluid are not changed while
@@ -144,7 +144,7 @@ impl Renderer {
 
     /// Runs the simulation, and then renders the result. Internally, it fires several more
     /// threads: one to simulate the fluid, and another one to render the result.
-    /// As a result a [`std::sync::Receiver<i64>`] is returned, by which a signal for every new
+    /// As a result a [`std::sync::mpsc::Receiver<i64>`] is returned, by which a signal for every new
     /// render will be sent over.
     pub fn render(&mut self) -> Receiver<i64> {
         let (simulation_tx, simulation_rx): (Sender<FluidStep>, Receiver<FluidStep>) =
@@ -169,6 +169,7 @@ impl Renderer {
         rendering_rx
     }
 
+    /// Prepares the next simulation by creating new instances of all the needed components
     fn prepare_simulation(&mut self) {
         self.current_simulation.fluid =
             Fluid::new(self.next_fluid_configs, self.next_simulation_configs);

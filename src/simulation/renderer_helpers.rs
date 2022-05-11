@@ -1,4 +1,3 @@
-use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
 use crate::simulation::fluid::ContainerWall;
 use crate::simulation::fluid::Fluid;
 use crate::simulation::obstacle::ObstaclesType;
@@ -14,7 +13,7 @@ macro_rules! density_img_path {
 }
 
 /// Saves the state of the current step of the fluid. The purpose of this structure is to be sent
-/// over from [`CurrentSimulation`](crate::simulation::current_simulation::CurrentSimulation) to
+/// over from [`CurrentSimulation`](crate::simulation::renderer_helpers::CurrentSimulation) to
 /// the [`Renderer`](crate::simulation::renderer::Renderer).
 pub struct FluidStep {
     fluid: Fluid,
@@ -22,23 +21,15 @@ pub struct FluidStep {
 }
 
 /// Performs the simulation of the fluid. It sends a
-/// [`FluidStep`](crate::simulation::current_simulation::FluidStep) over a [`std::sync::mpsc`]
-/// channel directly to the [`Renderer`].
+/// [`FluidStep`](crate::simulation::renderer_helpers::FluidStep) over a [`std::sync::mpsc`]
+/// channel directly to the [`crate::simulation::renderer::Renderer`].
 #[derive(Clone)]
 pub struct CurrentSimulation {
-    /// The Renderer owns the fluid that it simulates
+    /// The fluid state in the current simulation.
     pub fluid: Fluid,
 
-    /// Buffered fluid configurations for the next run. The configurations of the fluid are not
-    /// changed while the fluid is being simulated.
-    pub fluid_configs: FluidConfigs,
-
-    /// Buffered simulation configurations for the next run. The configurations of the fluid are
-    /// not changed while the fluid is being simulated.
-    pub simulation_configs: SimulationConfigs,
-
     /// Collection of all the obstacles. To update the fluid's behaviour to correspond to the
-    /// obstacles, use [`update_obstacles`].
+    /// obstacles, use [`crate::simulation::renderer::Renderer::update_configs()`].
     pub obstacles: Vec<ObstaclesType>,
 }
 
@@ -46,8 +37,6 @@ impl Default for CurrentSimulation {
     fn default() -> Self {
         Self {
             fluid: Fluid::default(),
-            fluid_configs: FluidConfigs::default(),
-            simulation_configs: SimulationConfigs::default(),
             obstacles: vec![ObstaclesType::Rectangle(
                 crate::simulation::obstacle::Rectangle::default(),
             )],
@@ -84,7 +73,7 @@ impl CurrentSimulation {
 }
 
 /// Listens for a signal to render the image with the next fluid state. After that it sends a
-/// signal to the [`App`](crate::app::App) to display it.
+/// signal to the [`App`](crate::app::app::App) to display it.
 #[derive(Clone)]
 pub struct RenderingListener {
     /// The directory in which the rendered images that result from the simulation are stored.
@@ -114,6 +103,7 @@ impl RenderingListener {
         project_root + "/" + &dir_name
     }
 
+    /// Creates the file where the result image is rendered.
     fn render_image(&self, fluid_step: FluidStep) {
         let fluid = fluid_step.fluid;
 

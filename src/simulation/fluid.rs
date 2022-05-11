@@ -7,7 +7,7 @@ use rand::Rng;
 
 use super::obstacle::ObstaclesType;
 
-/// Describes if a certain cell is a wall or not. See [`set_boundaries`].
+/// Describes if a certain cell is a wall or not. See [`Fluid::set_boundaries()`].
 #[derive(PartialEq, Eq, Copy, Clone, Hash, Debug)]
 pub enum ContainerWall {
     /// Default wall variant. Used for filling the inner cells of the obstacles
@@ -41,12 +41,13 @@ macro_rules! idx {
 /// given by the sum of the vector in the velocities_x and velocities_y coefficients
 /// that form a part of normalized vectors, too.
 ///
-///
+/// ```text
 /// velocities_y |^
 ///              | \  the sum of the two vectors forms a new vector: the direction of
 ///              |  \ the fluid in that exact cell
 ///              ---->
 ///            velocities_x
+/// ```
 #[derive(Clone)]
 pub struct Fluid {
     /// general configurations for the simulated fluid
@@ -108,12 +109,14 @@ impl Fluid {
         result
     }
 
+    /// Adds density at given coordinates
     fn add_density(&mut self, x: u32, y: u32, amount: f32) {
         let idx = idx!(x, y, self.simulation_configs.size);
         self.density[idx] += amount;
         self.scratch_space[idx] += amount;
     }
 
+    /// Adds velocity at given coordinates
     fn add_velocity(&mut self, x: u32, y: u32, amount_x: f32, amount_y: f32) {
         let idx = idx!(x, y, self.simulation_configs.size);
         self.velocities_x[idx] += amount_x;
@@ -132,24 +135,29 @@ impl Fluid {
     /// one of the axis of the coordinate system.
     ///
     /// ============== Working principle =================
-    /// A cell's velocity vector is a combination of the `velocities_x` and `velocities_y`
     ///
+    /// A cell's velocity vector is a combination of the `velocities_x` and `velocities_y`
+    /// ```text
     /// velocities_y |^
     ///              | \  sum of the two vectors forms a new vector: the direction of the
     ///              |  \ fluid in that exact cell
     ///              ---->
     ///            velocities_x
+    /// ```
     ///
     /// Mirroring of the vector with regards to Oy is made by replacing the x component of the
     /// vector with its opposite number (the same value, but with the opposite sign)
     ///
+    /// ```text
     /// new vector which    ^|^
     /// mirrors the        / | \  sum of the two vectors forms a new vector: the direction of the
     /// original          /  |  \ fluid in that exact cell
     ///                 <=====---->
     ///                 velocities_x
+    /// ```
     ///
     /// *Note 2.:* The above example is appropriate for the left wall:
+    /// ```text
     ///  __________
     ///  ||  ^     |
     ///  || /      |
@@ -158,10 +166,12 @@ impl Fluid {
     ///  || \      |
     ///  ||  \     |
     ///  -----------
+    ///  ```
     ///
     /// *Note 3.:* The corners do this mirroring for both their x and y component which results in
     /// a vector symmetrical by both Ox and Oy.
     ///
+    /// ```text
     ///   mirrored vector   ^|^   (1)
     ///   by Oy (2)        / | \  sum of the two vectors forms a new vector: the direction of the
     ///                   /  |  \ fluid in that exact cell
@@ -172,6 +182,7 @@ impl Fluid {
     ///  pointing the oppisite
     ///  direction of (1)
     ///  (ignore downward arrow's tip :))
+    ///  ```
     ///
     fn set_boundaries(
         orientation: Orientation,
@@ -245,6 +256,8 @@ impl Fluid {
             0.5 * (x[idx!(size - 2, size - 1, size)] + x[idx!(size - 1, size - 2, size)]);
     }
 
+    /// Diffuses the given matrix by solving a linear equation as regards the given orientation.
+    /// See [`Orientation`].
     fn diffuse(
         orientation: Orientation,
         x: &mut [f32],
@@ -269,6 +282,7 @@ impl Fluid {
         );
     }
 
+    /// Solves the given linear equation by taking into account the boundaries of the scene
     fn lin_solve(
         orientation: Orientation,
         x: &mut [f32],
@@ -295,6 +309,9 @@ impl Fluid {
         }
     }
 
+    /// Used for conserving the mass since the algorithms supports incompressible fluids. This is
+    /// performed by setting the boundaries in all the dimensions and for both the velocities and
+    /// the fluid.
     fn project(
         velocities_x: &mut [f32],
         velocities_y: &mut [f32],
@@ -342,6 +359,7 @@ impl Fluid {
         Fluid::set_boundaries(Orientation::AdjustColumn, velocities_y, size, cells_type);
     }
 
+    /// Moves the density through the set up velocity field.
     fn advect(
         orientation: Orientation,
         densities: &mut [f32],
@@ -490,6 +508,7 @@ impl Fluid {
         self.scratch_space = self.density.clone();
     }
 
+    /// Initializes the density throughout the field with zeroes.
     fn init_density(&mut self) {
         for j in 0..self.simulation_configs.size {
             for i in 0..self.simulation_configs.size {
@@ -504,6 +523,7 @@ impl Fluid {
         }
     }
 
+    /// Initializes the velocities of the field by making them all point to down right corner.
     fn init_velocities(&mut self) {
         for j in 0..self.simulation_configs.size {
             for i in 0..self.simulation_configs.size {
@@ -512,6 +532,8 @@ impl Fluid {
         }
     }
 
+    /// Initializes the corner walls in the field, i.e. the image's frame, by marking each cell with
+    /// [`ContainerWall::DefaultWall`].
     fn init_walls(&mut self) {
         for i in 0..self.simulation_configs.size {
             self.cells_type[idx!(i, 0, self.simulation_configs.size)] = ContainerWall::DefaultWall;

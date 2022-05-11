@@ -1,4 +1,4 @@
-use super::cached_image::CashedImage;
+use super::cached_image::CachedImage;
 use crate::app::app::egui::ScrollArea;
 use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
 use crate::simulation::renderer::density_img_path;
@@ -42,7 +42,7 @@ pub struct App {
 
     /// The last showed image is cached.
     #[cfg_attr(feature = "persistence", serde(skip))]
-    cached_image: Option<CashedImage>,
+    cached_image: Option<CachedImage>,
 
     /// The play button has been clicked, and now the simulation should be displayed frame by frame
     #[cfg_attr(feature = "persistence", serde(skip))]
@@ -71,6 +71,7 @@ impl App {
         }
     }
 
+    /// Returns how zoomed is the simulation result image in the application.
     fn get_zoom_factor(&self) -> Option<u8> {
         for i in self.settings_menu.settings_menu.iter() {
             if let SettingType::Viewport(result) = i {
@@ -82,7 +83,7 @@ impl App {
 
     /// Shows the cached image if it should. This is a helper function of [`Self::show_image()`].
     fn show_cached_image_in_ui(
-        image: &CashedImage,
+        image: &CachedImage,
         path: &str,
         zoom_factor: u8,
         ui: &mut egui::Ui,
@@ -123,7 +124,7 @@ impl App {
         size *= (ui.available_width() / size.x).min(1.0);
 
         ui.image(texture_id, size);
-        self.cached_image = Some(CashedImage {
+        self.cached_image = Some(CachedImage {
             path: image_path.to_string(),
             zoom_factor,
             dimensions: size,
@@ -154,6 +155,7 @@ impl App {
         }
     }
 
+    /// Displays the next frame of the simulation in the central panel
     fn move_simulation_frame(&mut self, next_frame: i64, frame: &epi::Frame, ui: &mut egui::Ui) {
         self.simulation_progress =
             next_frame as f32 / (self.renderer.fluid.simulation_configs.frames - 1) as f32;

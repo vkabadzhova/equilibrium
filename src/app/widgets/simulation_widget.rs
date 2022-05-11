@@ -66,6 +66,7 @@ impl super::View for SimulationWidget {
 }
 
 impl SimulationWidget {
+    /// Sets up the content of the widget.
     fn gallery_grid_contents(&mut self, ui: &mut egui::Ui) {
         let Self {
             // Field not used, ignore it. Item placed for completeness.

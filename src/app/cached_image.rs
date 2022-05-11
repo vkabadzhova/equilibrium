@@ -2,7 +2,7 @@ use eframe::egui::TextureId;
 
 /// A record of a cached image
 #[derive(Clone)]
-pub struct CashedImage {
+pub struct CachedImage {
     /// The path of the last rendered image is saved. The field is used for comparison if the last
     /// texture should be used.
     pub path: String,
@@ -21,8 +21,8 @@ pub struct CashedImage {
     pub has_changed: bool,
 }
 
-impl CashedImage {
-    /// States if the given structure is already cashed in the current object.
+impl CachedImage {
+    /// States if the given structure is already cached in the current object.
     pub fn consists_of(&self, path: &str, zoom: u8) -> bool {
         self.path == path && self.zoom_factor == zoom
     }

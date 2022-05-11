@@ -1,8 +1,8 @@
 //! The crate is simulating fluid dynamics and is showing it in a user-friendly
 //! application built upon [egui](crates.io/crates/egui) from where various
-//! parameters regarding the [simulation](crate::app::widgets::simulation_configs_menu)
+//! parameters regarding the [simulation](crate::app::widgets::simulation_widget)
 //! (such as speed /size of step/, length
-//! /number of frames/, etc), the [fluid](crate::app::widgets::fluid_configs_menu) (diffusion rate, viscousity, colour),
+//! /number of frames/, etc), the [fluid](crate::app::widgets::fluid_widget) (diffusion rate, viscousity, colour),
 //! etc. can be adjusted. The simulation is grid- and CPU-based. The results of
 //! the simulation are saved in the `rendered_images/` directory which is
 //! located directly under the project's root directory. The results are also
