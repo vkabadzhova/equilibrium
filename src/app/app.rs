@@ -180,7 +180,7 @@ impl App {
 
     /// Manages the next frame - either takes it from a channel open between the renderer and the
     /// applicaiton, or directly increments the current_frame.
-    fn manage_next_frame(&mut self) {
+    fn manage_next_frame(&mut self, frame: &epi::Frame) {
         let frames_count = self.renderer.fluid.simulation_configs.frames;
 
         if self.is_simulation_in_process {
@@ -190,6 +190,8 @@ impl App {
                     .try_recv()
                     .unwrap_or(self.current_frame);
             }
+
+            frame.request_repaint();
         } else {
             self.current_frame += 1;
         }
@@ -329,7 +331,7 @@ impl App {
         ui.heading("Welcome to the Equilibrium Fluid Simulator!");
 
         if self.is_play_button_on {
-            self.manage_next_frame();
+            self.manage_next_frame(frame);
         }
 
         self.move_simulation_frame(self.current_frame, frame, ui);
