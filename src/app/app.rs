@@ -48,6 +48,10 @@ pub struct App {
     /// The simulation is currently in progress
     #[cfg_attr(feature = "persistence", serde(skip))]
     is_simulation_in_process: bool,
+
+    /// Is a fluid simulated and ready to be showed
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    is_simulation_ready: bool,
 }
 
 impl App {
@@ -64,6 +68,7 @@ impl App {
             cached_image: None,
             is_play_button_on: false,
             is_simulation_in_process: false,
+            is_simulation_ready: false,
         }
     }
 
@@ -318,12 +323,13 @@ impl App {
             }
         }
 
-        if self.is_play_button_on {
+        if self.is_play_button_on || self.is_simulation_ready {
             self.move_simulation_frame(self.current_frame, frame, ui);
 
             if self.current_frame == frames_count - 1 {
                 self.is_play_button_on = false;
                 self.is_simulation_in_process = false;
+                self.is_simulation_ready = true;
             }
         }
 
