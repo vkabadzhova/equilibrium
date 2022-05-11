@@ -170,8 +170,14 @@ impl App {
             return;
         }
 
-        self.simulation_progress =
-            next_frame as f32 / (self.renderer.fluid.simulation_configs.frames - 1) as f32;
+        self.simulation_progress = next_frame as f32
+            / (self
+                .renderer
+                .current_simulation
+                .fluid
+                .simulation_configs
+                .frames
+                - 1) as f32;
 
         self.show_image(&image_path, frame, ui);
 
@@ -181,7 +187,12 @@ impl App {
     /// Manages the next frame - either takes it from a channel open between the renderer and the
     /// applicaiton, or directly increments the current_frame.
     fn manage_next_frame(&mut self, frame: &epi::Frame) {
-        let frames_count = self.renderer.fluid.simulation_configs.frames;
+        let frames_count = self
+            .renderer
+            .current_simulation
+            .fluid
+            .simulation_configs
+            .frames;
 
         if self.is_simulation_in_process {
             if self.current_frame < frames_count - 1 {
@@ -280,24 +291,46 @@ impl App {
         ui.add(
             egui::Slider::new(
                 &mut self.current_frame,
-                0..=self.renderer.fluid.simulation_configs.frames - 1,
+                0..=self
+                    .renderer
+                    .current_simulation
+                    .fluid
+                    .simulation_configs
+                    .frames
+                    - 1,
             )
             .text("Current frame"),
         );
 
         ui.horizontal_wrapped(|ui| {
             if ui.button("Previous").clicked() {
-                self.current_frame =
-                    (self.current_frame - 1) % self.renderer.fluid.simulation_configs.frames;
+                self.current_frame = (self.current_frame - 1)
+                    % self
+                        .renderer
+                        .current_simulation
+                        .fluid
+                        .simulation_configs
+                        .frames;
 
                 if self.current_frame < 0 {
-                    self.current_frame = self.renderer.fluid.simulation_configs.frames - 1;
+                    self.current_frame = self
+                        .renderer
+                        .current_simulation
+                        .fluid
+                        .simulation_configs
+                        .frames
+                        - 1;
                 }
             }
 
             if ui.button("Next").clicked() {
-                self.current_frame =
-                    (self.current_frame + 1) % self.renderer.fluid.simulation_configs.frames;
+                self.current_frame = (self.current_frame + 1)
+                    % self
+                        .renderer
+                        .current_simulation
+                        .fluid
+                        .simulation_configs
+                        .frames;
             }
         });
 

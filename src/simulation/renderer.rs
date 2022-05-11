@@ -19,9 +19,6 @@ use std::sync::mpsc::{Receiver, Sender};
 /// frame 0). The latter is achieved by bufferring the future state of the configurations.
 /// In order to update the next configurations, use [`Renderer::update_configs()`].
 pub struct Renderer {
-    /// The Renderer owns the fluid that it simulates
-    pub fluid: Fluid,
-
     /// Buffered fluid configurations for the next run. The configurations of the fluid are not
     /// changed while the fluid is being simulated.
     next_fluid_configs: FluidConfigs,
@@ -80,7 +77,6 @@ impl Default for Renderer {
             next_obstacles: vec![ObstaclesType::Rectangle(
                 crate::simulation::obstacle::Rectangle::default(),
             )],
-            fluid,
             save_into_dir: default_dir.clone(),
             next_save_into_dir: default_dir.clone(),
             current_simulation: CurrentSimulation::default(),
@@ -100,7 +96,6 @@ impl Renderer {
             next_obstacles_color: obstacles_color,
             obstacles: Vec::new(),
             next_obstacles: Vec::new(),
-            fluid,
             save_into_dir: save_into_dir.clone(),
             next_save_into_dir: save_into_dir,
             current_simulation: CurrentSimulation::default(),
@@ -154,7 +149,7 @@ impl Renderer {
         });
 
         let rendering_listener = self.rendering_listener.clone();
-        let max_frames = self.fluid.simulation_configs.frames;
+        let max_frames = self.current_simulation.fluid.simulation_configs.frames;
 
         let (rendering_tx, rendering_rx): (Sender<i64>, Receiver<i64>) = mpsc::channel();
 
@@ -197,7 +192,10 @@ mod tests {
         let mut renderer = Renderer::new(fluid, Color32::RED, "rendered_images".to_string());
 
         // assert it is correctly configured for the test
-        assert_ne!(renderer.fluid.fluid_configs.diffusion, 0.4212312);
+        assert_ne!(
+            renderer.current_simulation.fluid.fluid_configs.diffusion,
+            0.4212312
+        );
 
         //---------- Init SettingMenu -----------
         let mut fluid_ui_setting = FluidWidget::default();
