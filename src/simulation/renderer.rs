@@ -27,23 +27,13 @@ pub struct Renderer {
     /// not changed while the fluid is being simulated.
     next_simulation_configs: SimulationConfigs,
 
-    /// The directory in which the rendered images that result from the simulation are stored.
-    pub save_into_dir: String,
-
     /// Buffered name for saving directory for the next run. Use when you don't want to change the
     /// directory in the middle of the previous simulation. Use with [`Renderer::update_configs()`]
     next_save_into_dir: String,
 
-    /// The color of all obstacles. Individual obstacles cannot have different colors.
-    pub obstacles_color: eframe::egui::Color32,
-
     /// Buffered color for the obstacles. The configurations of the fluid are not changed while
     /// the simulation is running.
     next_obstacles_color: eframe::egui::Color32,
-
-    /// Collection of all the obstacles. To update the fluid's behaviour to correspond to the
-    /// obstacles, use [`Renderer::update_configs()`].
-    pub obstacles: Vec<ObstaclesType>,
 
     /// Buffered obstacles for the next run. The configurations of the fluid are not changed while
     /// the fluid is being simulated.
@@ -65,15 +55,10 @@ impl Default for Renderer {
         Self {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
-            obstacles_color: Color32::RED,
             next_obstacles_color: Color32::RED,
-            obstacles: vec![ObstaclesType::Rectangle(
-                crate::simulation::obstacle::Rectangle::default(),
-            )],
             next_obstacles: vec![ObstaclesType::Rectangle(
                 crate::simulation::obstacle::Rectangle::default(),
             )],
-            save_into_dir: default_dir.clone(),
             next_save_into_dir: default_dir.clone(),
             current_simulation: CurrentSimulation::default(),
             rendering_listener: RenderingListener::default(),
@@ -88,11 +73,8 @@ impl Renderer {
         Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
-            obstacles_color,
             next_obstacles_color: obstacles_color,
-            obstacles: Vec::new(),
             next_obstacles: Vec::new(),
-            save_into_dir: save_into_dir.clone(),
             next_save_into_dir: save_into_dir,
             current_simulation: CurrentSimulation::default(),
             rendering_listener: RenderingListener::default(),
