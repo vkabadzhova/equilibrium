@@ -9,15 +9,15 @@ use std::sync::mpsc::{Receiver, Sender};
 
 /// Utility for visualization and interaction with the fluid simulation.
 ///
-/// There are two ways to modify the simulation’s parameters while the simulation is
-/// going: to rerun the simulation from the beginning, or to continue it with
-/// the newly added parameters. Internally, there are parameters of the type `next_*_configs`
-/// that are used. In the first case, they are updating the current state of the
-/// renderer live during the simulation (the current state is stored in the
-/// struct’s member [`fluid`](crate::simulation::renderer::Renderer::fluid)), or,
-/// otherwise, update it at the **beginning** of the new simulation (i.e.
-/// frame 0). The latter is achieved by bufferring the future state of the configurations.
-/// In order to update the next configurations, use [`Renderer::update_configs()`].
+/// In future implementations it is planned to have two ways to modify the simulation’s parameters
+/// while the simulation is running: to rerun the simulation from the beginning, or to continue it
+/// with the newly added parameters. Currently the configurations that are changed, will be applied
+/// in the next run of the simulation. Internally, there are parameters of the type `next_*_configs`
+/// that are used to buffer the future configurations. In the first case, they will be updating the
+/// current state of the renderer live during the simulation (the current state is stored in the
+/// struct’s member [`Renderer::current_simulation`]), or, in the other, they will update it at the
+/// **beginning** of the new simulation (i.e. frame 0). In order to update the next configurations,
+/// use [`Renderer::update_configs()`].
 pub struct Renderer {
     /// Buffered fluid configurations for the next run. The configurations of the fluid are not
     /// changed while the fluid is being simulated.
