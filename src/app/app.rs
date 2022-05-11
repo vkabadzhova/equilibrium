@@ -377,7 +377,7 @@ impl App {
 
 #[cfg(test)]
 mod tests {
-    use crate::simulation::renderer::density_img_path;
+    use crate::simulation::renderer_helpers::density_img_path;
 
     #[test]
     fn density_img_path_str_works() {

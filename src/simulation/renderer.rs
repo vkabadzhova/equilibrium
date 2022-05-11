@@ -65,7 +65,7 @@ impl Default for Renderer {
         let fluid = Fluid::default();
         let default_dir = RenderingListener::make_save_into_dir("rendered_images");
 
-        let result = Self {
+        Self {
             next_fluid_configs: fluid.fluid_configs.clone(),
             next_simulation_configs: fluid.simulation_configs.clone(),
             obstacles_color: Color32::RED,
@@ -80,9 +80,7 @@ impl Default for Renderer {
             next_save_into_dir: default_dir.clone(),
             current_simulation: CurrentSimulation::default(),
             rendering_listener: RenderingListener::default(),
-        };
-
-        result
+        }
     }
 }
 
@@ -174,7 +172,7 @@ mod tests {
     use crate::app::widgets::fluid_widget::FluidWidget;
     use crate::app::widgets::widgets_menu::{SettingType, SettingsMenu};
     use crate::simulation::configs::{FluidConfigs, SimulationConfigs};
-    use crate::simulation::{fluid::Fluid, obstacle::Obstacle, renderer::Renderer};
+    use crate::simulation::{fluid::Fluid, renderer::Renderer};
     use eframe::egui::Color32;
 
     #[test]
@@ -204,52 +202,5 @@ mod tests {
         renderer.update_configs(&settings_menu.settings_menu);
 
         assert_eq!(renderer.next_fluid_configs.diffusion, 0.4212312);
-    }
-
-    use crate::simulation::fluid::ContainerWall;
-
-    fn calc_height<T>(a: (T, T), b: (T, T)) -> T::Output
-    where
-        T: std::ops::Sub,
-    {
-        b.0 - a.0
-    }
-
-    fn calc_width<T>(a: (T, T), b: (T, T)) -> T::Output
-    where
-        T: std::ops::Sub,
-    {
-        b.0 - a.0
-    }
-
-    #[test]
-    fn default_renderer() {
-        let renderer = Renderer::default();
-        let default_walls_real_count = renderer
-            .fluid
-            .cells_type
-            .iter()
-            .filter(|&el| el == &ContainerWall::DefaultWall)
-            .count();
-
-        let size = renderer.fluid.simulation_configs.size;
-        let image_parameter = 2 * (size + (size - 2));
-
-        // Sums up the area of all obstacles. NB: Assumes all obstacles are rectangles
-        let obstacles_area = renderer.obstacles.iter().fold(0, |acc, x| {
-            acc + calc_width(
-                x.clone().get_approximate_points()[0],
-                x.clone().get_approximate_points()[1],
-            ) * calc_height(
-                x.clone().get_approximate_points()[0],
-                x.clone().get_approximate_points()[1],
-            )
-        });
-
-        // NB: We explicitly know how that the obstacle does not overlap with the perimeter.
-        let expected_count = obstacles_area + i64::from(image_parameter);
-
-        // Safety note: Default wall size is way smaller than usize.
-        assert_eq!(default_walls_real_count, expected_count as usize);
     }
 }

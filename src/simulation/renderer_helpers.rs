@@ -187,3 +187,55 @@ impl RenderingListener {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::simulation::obstacle::Obstacle;
+    use crate::simulation::{fluid::ContainerWall, renderer_helpers::CurrentSimulation};
+
+    fn calc_height<T>(a: (T, T), b: (T, T)) -> T::Output
+    where
+        T: std::ops::Sub,
+    {
+        b.0 - a.0
+    }
+
+    fn calc_width<T>(a: (T, T), b: (T, T)) -> T::Output
+    where
+        T: std::ops::Sub,
+    {
+        b.0 - a.0
+    }
+
+    #[test]
+    fn mark_fluid_obstacles_default_current_simulation() {
+        let mut current_simulation = CurrentSimulation::default();
+        current_simulation.mark_fluid_obstacles();
+        let default_walls_real_count = current_simulation
+            .fluid
+            .cells_type
+            .iter()
+            .filter(|&el| el == &ContainerWall::DefaultWall)
+            .count();
+
+        let size = current_simulation.fluid.simulation_configs.size;
+        let image_parameter = 2 * (size + (size - 2));
+
+        // Sums up the area of all obstacles. NB: Assumes all obstacles are rectangles
+        let obstacles_area = current_simulation.obstacles.iter().fold(0, |acc, x| {
+            acc + calc_width(
+                x.clone().get_approximate_points()[0],
+                x.clone().get_approximate_points()[1],
+            ) * calc_height(
+                x.clone().get_approximate_points()[0],
+                x.clone().get_approximate_points()[1],
+            )
+        });
+
+        // NB: We explicitly know how that the obstacle does not overlap with the perimeter.
+        let expected_count = obstacles_area + i64::from(image_parameter);
+
+        // Safety note: Default wall size is way smaller than usize.
+        assert_eq!(default_walls_real_count, expected_count as usize);
+    }
+}
