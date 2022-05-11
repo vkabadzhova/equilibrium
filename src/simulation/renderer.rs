@@ -6,6 +6,7 @@ use crate::simulation::fluid::Fluid;
 use eframe::egui::Color32;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
+use std::thread::JoinHandle;
 
 /// Utility for visualization and interaction with the fluid simulation.
 ///
@@ -115,7 +116,7 @@ impl Renderer {
     /// threads: one to simulate the fluid, and another one to render the result.
     /// As a result a [`std::sync::mpsc::Receiver<i64>`] is returned, by which a signal for every new
     /// render will be sent over.
-    pub fn render(&mut self) -> Receiver<i64> {
+    pub fn render(&mut self) -> (Receiver<i64>, Vec<JoinHandle<()>>) {
         let (simulation_tx, simulation_rx): (Sender<FluidStep>, Receiver<FluidStep>) =
             mpsc::channel();
 
@@ -135,7 +136,9 @@ impl Renderer {
             rendering_listener.listen(max_frames, simulation_rx, rendering_tx);
         });
 
-        rendering_rx
+        let result_joinhandles = vec![simulation_handler, rendering_handler];
+
+        (rendering_rx, result_joinhandles)
     }
 
     /// Prepares the next simulation by creating new instances of all the needed components

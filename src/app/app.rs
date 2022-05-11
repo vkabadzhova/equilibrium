@@ -10,6 +10,7 @@ use image::GenericImageView;
 use simplelog::*;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
+use std::thread::JoinHandle;
 
 /// Entry-point for the fluid simulation application
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
@@ -52,6 +53,11 @@ pub struct App {
     /// Is a fluid simulated and ready to be showed
     #[cfg_attr(feature = "persistence", serde(skip))]
     is_simulation_ready: bool,
+
+    /// JoinHandle's for the rendering threads: the [`CurrentSimulation`] simulator, and the
+    /// [`RenderingListener`] renderer
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    rendering_joinhandlers: Vec<JoinHandle<()>>,
 }
 
 impl App {
@@ -69,6 +75,7 @@ impl App {
             is_play_button_on: false,
             is_simulation_in_process: false,
             is_simulation_ready: false,
+            rendering_joinhandlers: Vec::new(),
         }
     }
 
@@ -184,6 +191,15 @@ impl App {
         frame.request_repaint();
     }
 
+    /// Joins all the spawned threads regarding the rendering process.
+    fn join_rendering_joinhandles(&mut self) {
+        let mut buf: Vec<JoinHandle<()>> = Vec::new();
+        std::mem::swap(&mut buf, &mut self.rendering_joinhandlers);
+        buf.into_iter().for_each(|el| {
+            let _ = el.join();
+        });
+    }
+
     /// Manages the next frame - either takes it from a channel open between the renderer and the
     /// applicaiton, or directly increments the current_frame.
     fn manage_next_frame(&mut self, frame: &epi::Frame) {
@@ -217,6 +233,8 @@ impl App {
             self.is_play_button_on = false;
             self.is_simulation_in_process = false;
             self.is_simulation_ready = true;
+
+            self.join_rendering_joinhandles();
         }
     }
 }
@@ -345,7 +363,10 @@ impl App {
             self.simulation_progress = 0.0;
             self.current_frame = 0;
 
-            self.signal_receiver = self.renderer.render();
+            let rendering_result = self.renderer.render();
+            self.signal_receiver = rendering_result.0;
+            self.rendering_joinhandlers = rendering_result.1;
+
             self.is_simulation_in_process = true;
             self.is_play_button_on = true;
         }
@@ -444,5 +465,38 @@ mod tests {
             density_img_path!("holiday_dir", 0),
             "holiday_dir/density0.jpg"
         );
+    }
+
+    use crate::app::app::App;
+    use crate::simulation::renderer::Renderer;
+
+    #[test]
+    fn join_rendering_joinhandles() {
+        // -------- Set up ---------
+        let renderer = Renderer::default();
+
+        let mut app = App::new(renderer);
+
+        // ------ Spawn threads ----
+        let mut result_joinhandles = Vec::new();
+
+        // 100 miliseconds should be fast, but also enough to check if the test worked out.
+        result_joinhandles.push(std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(100))
+        }));
+
+        result_joinhandles.push(std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(100))
+        }));
+
+        // ------ Put threads in app ----
+        std::mem::swap(&mut app.rendering_joinhandlers, &mut result_joinhandles);
+
+        assert_eq!(app.rendering_joinhandlers.len(), 2);
+        assert_eq!(result_joinhandles.len(), 0);
+
+        // ------ Join threads ----
+        app.join_rendering_joinhandles();
+        assert_eq!(app.rendering_joinhandlers.len(), 0);
     }
 }
