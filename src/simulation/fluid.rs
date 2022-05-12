@@ -109,6 +109,13 @@ impl Fluid {
         result
     }
 
+    fn to_coordinate<T>(idx: T, size: T) -> (T, T)
+    where
+        T: std::ops::Div<Output = T> + std::ops::Rem<Output = T> + Copy,
+    {
+        (idx % size, idx / size)
+    }
+
     /// Adds density at given coordinates
     fn add_density(&mut self, x: u32, y: u32, amount: f32) {
         let idx = idx!(x, y, self.simulation_configs.size);
@@ -121,6 +128,64 @@ impl Fluid {
         let idx = idx!(x, y, self.simulation_configs.size);
         self.velocities_x[idx] += amount_x;
         self.velocities_y[idx] += amount_y;
+    }
+
+    fn manage_single_cell_boundary(
+        orientation: Orientation,
+        x: &mut [f32],
+        size: i64,
+        cells_type: &[ContainerWall],
+        i: i64,
+        j: i64,
+    ) {
+        if cells_type[idx!(i, j, size)] == ContainerWall::DefaultWall {
+            return;
+        }
+
+        let up_point_coordinates = (i, (j - 1).clamp(0, size - 1));
+        let down_point_coordinates = (i, (j + 1).clamp(0, size - 1));
+        let left_point_coordinates = ((i - 1).clamp(0, size - 1), j);
+        let right_point_coordinates = ((i + 1).clamp(0, size - 1), j);
+
+        match orientation {
+            Orientation::AdjustRow => {
+                if cells_type[idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
+                    == ContainerWall::DefaultWall
+                {
+                    x[idx!(i, j, size)] =
+                        -x[idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
+                }
+                if cells_type[idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
+                    == ContainerWall::DefaultWall
+                {
+                    x[idx!(i, j, size)] =
+                        -x[idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
+                }
+            }
+            Orientation::AdjustColumn => {
+                if cells_type[idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
+                    == ContainerWall::DefaultWall
+                {
+                    x[idx!(i, j, size)] =
+                        -x[idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
+                }
+                if cells_type[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
+                    == ContainerWall::DefaultWall
+                {
+                    x[idx!(i, j, size)] =
+                        -x[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
+                }
+            }
+            Orientation::Passive => {
+                // NB: only for the edges
+
+                x[idx!(i, 0, size)] = x[idx!(i, 1, size)];
+                x[idx!(i, size - 1, size)] = x[idx!(i, size - 2, size)];
+
+                x[idx!(0, j, size)] = x[idx!(1, j, size)];
+                x[idx!(size - 1, j, size)] = x[idx!(size - 2, j, size)];
+            }
+        }
     }
 
     /// Reflects a cell's velocity when a wall is hit. It works as follows:
@@ -157,6 +222,7 @@ impl Fluid {
     /// ```
     ///
     /// *Note 2.:* The above example is appropriate for the left wall:
+    ///
     /// ```text
     ///  __________
     ///  ||  ^     |
@@ -166,7 +232,7 @@ impl Fluid {
     ///  || \      |
     ///  ||  \     |
     ///  -----------
-    ///  ```
+    /// ```
     ///
     /// *Note 3.:* The corners do this mirroring for both their x and y component which results in
     /// a vector symmetrical by both Ox and Oy.
@@ -182,8 +248,7 @@ impl Fluid {
     ///  pointing the oppisite
     ///  direction of (1)
     ///  (ignore downward arrow's tip :))
-    ///  ```
-    ///
+    /// ```
     fn set_boundaries(
         orientation: Orientation,
         x: &mut [f32],
@@ -193,57 +258,7 @@ impl Fluid {
         let size = i64::from(size);
         for j in 0..=size - 1 {
             for i in 0..=size - 1 {
-                if cells_type[idx!(i, j, size)] == ContainerWall::DefaultWall {
-                    continue;
-                }
-
-                let up_point_coordinates = (i, (j - 1).clamp(0, size - 1));
-                let down_point_coordinates = (i, (j + 1).clamp(0, size - 1));
-                let left_point_coordinates = ((i - 1).clamp(0, size - 1), j);
-                let right_point_coordinates = ((i + 1).clamp(0, size - 1), j);
-
-                match orientation {
-                    Orientation::AdjustRow => {
-                        if cells_type
-                            [idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
-                            == ContainerWall::DefaultWall
-                        {
-                            x[idx!(i, j, size)] =
-                                -x[idx!(left_point_coordinates.0, left_point_coordinates.1, size)]
-                        }
-                        if cells_type
-                            [idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
-                            == ContainerWall::DefaultWall
-                        {
-                            x[idx!(i, j, size)] =
-                                -x[idx!(right_point_coordinates.0, right_point_coordinates.1, size)]
-                        }
-                    }
-                    Orientation::AdjustColumn => {
-                        if cells_type
-                            [idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
-                            == ContainerWall::DefaultWall
-                        {
-                            x[idx!(i, j, size)] =
-                                -x[idx!(down_point_coordinates.0, down_point_coordinates.1, size)]
-                        }
-                        if cells_type[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
-                            == ContainerWall::DefaultWall
-                        {
-                            x[idx!(i, j, size)] =
-                                -x[idx!(up_point_coordinates.0, up_point_coordinates.1, size)]
-                        }
-                    }
-                    Orientation::Passive => {
-                        // NB: works only for the edges
-
-                        x[idx!(i, 0, size)] = x[idx!(i, 1, size)];
-                        x[idx!(i, size - 1, size)] = x[idx!(i, size - 2, size)];
-
-                        x[idx!(0, j, size)] = x[idx!(1, j, size)];
-                        x[idx!(size - 1, j, size)] = x[idx!(size - 2, j, size)];
-                    }
-                }
+                Self::manage_single_cell_boundary(orientation, x, size, cells_type, i, j);
             }
         }
 
@@ -605,4 +620,17 @@ impl Fluid {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use crate::simulation::fluid::Fluid;
+
+    #[test]
+    fn to_coordinate() {
+        // ------ Set up coordinates -----
+        let coordinate = (3, 4);
+        let size = 10;
+
+        let idx = idx!(coordinate.0, coordinate.1, size);
+
+        assert_eq!(coordinate, Fluid::to_coordinate(idx, size));
+    }
+}
