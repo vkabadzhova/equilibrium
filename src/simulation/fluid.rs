@@ -607,13 +607,13 @@ impl Fluid {
 
     /// Fills the inner cells of the obstacles with [`ContainerWall::DefaultWall`]
     /// NB: works as approximation to the real obstacle. By approximating a rectangle.
-    pub fn fill_obstacle(&mut self, obstacle: &mut ObstaclesType) {
+    pub fn fill_obstacle(&mut self, obstacle: &mut ObstaclesType, container_wall: ContainerWall) {
         let points = obstacle.get_approximate_points();
 
         for x in points[0].0..points[1].0 {
             for y in points[0].1..points[1].1 {
                 self.cells_type[idx!(x, y, i64::from(self.simulation_configs.size))] =
-                    ContainerWall::DefaultWall;
+                    container_wall;
             }
         }
     }

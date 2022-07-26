@@ -69,7 +69,7 @@ impl Default for Renderer {
 
 impl Renderer {
     /// Creates new Renderer
-    pub fn new(fluid: Fluid, obstacles_color: Color32, images_dir: String) -> Renderer {
+    pub fn new(fluid: Fluid, obstacles_color: Color32, images_dir: String, animate_obstacles_using_game_of_life: bool) -> Renderer {
         let save_into_dir = RenderingListener::make_save_into_dir(&images_dir);
         Renderer {
             next_fluid_configs: fluid.fluid_configs.clone(),
@@ -77,7 +77,7 @@ impl Renderer {
             next_obstacles_color: obstacles_color,
             next_obstacles: Vec::new(),
             next_save_into_dir: save_into_dir,
-            current_simulation: CurrentSimulation::default(),
+            current_simulation: CurrentSimulation::new(animate_obstacles_using_game_of_life),
             rendering_listener: RenderingListener::default(),
         }
     }
@@ -102,6 +102,8 @@ impl Renderer {
                         .map(|el| el.obstacle)
                         .collect();
                     self.next_obstacles_color = obstacle_widget.color;
+                    println!("Updating animation {} -> {}", self.current_simulation.animate_obstacles_using_game_of_life, obstacle_widget.animate_obstacles_using_game_of_life);
+                    self.current_simulation.animate_obstacles_using_game_of_life = obstacle_widget.animate_obstacles_using_game_of_life;
                 }
                 SettingType::Viewport(viewport_widget) => {
                     self.next_save_into_dir = RenderingListener::make_save_into_dir(
@@ -123,6 +125,7 @@ impl Renderer {
         self.prepare_simulation();
 
         let mut current_simulation = self.current_simulation.clone();
+        println!("Current simulation animatino flag: {}", current_simulation.animate_obstacles_using_game_of_life);
         let simulation_handler = std::thread::spawn(move || {
             current_simulation.simulate(simulation_tx);
         });
@@ -146,6 +149,7 @@ impl Renderer {
         self.current_simulation = CurrentSimulation {
             fluid: Fluid::new(self.next_fluid_configs, self.next_simulation_configs),
             obstacles: self.next_obstacles.clone(),
+            animate_obstacles_using_game_of_life: self.current_simulation.animate_obstacles_using_game_of_life
         };
 
         self.rendering_listener = RenderingListener {
@@ -170,7 +174,7 @@ mod tests {
         let simulation_configs = SimulationConfigs::default();
 
         let fluid = Fluid::new(fluid_configs, simulation_configs);
-        let mut renderer = Renderer::new(fluid, Color32::RED, "rendered_images".to_string());
+        let mut renderer = Renderer::new(fluid, Color32::RED, "rendered_images".to_string(), false);
 
         // assert it is correctly configured for the test
         assert_ne!(

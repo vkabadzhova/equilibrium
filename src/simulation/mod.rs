@@ -24,3 +24,6 @@ pub mod obstacle;
 /// the drivers (a.k.a. the [`Renderer`](crate::simulation::renderer::Renderer)
 /// and the [`Fluid`](crate::simulation::fluid::Fluid).
 pub mod configs;
+
+/// Implementation of obstacle animation.
+pub mod animation;

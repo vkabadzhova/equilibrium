@@ -4,6 +4,9 @@ use crate::simulation::configs::SimulationConfigs;
 pub trait Obstacle {
     /// Get up left and down right point using which the obstacle is approximated.
     fn get_approximate_points(&mut self) -> &mut Vec<line_drawing::Point<i64>>;
+
+    /// Relocate obstacle by given deltas on the X and Y axes
+    fn relocate(&mut self, delta_x: i64, delta_y: i64);
 }
 
 /// Enum describing the various obstacles' types. This is what unifies all the widgets
@@ -18,6 +21,12 @@ impl Obstacle for ObstaclesType {
     fn get_approximate_points(&mut self) -> &mut Vec<line_drawing::Point<i64>> {
         match self {
             ObstaclesType::Rectangle(rectangle) => &mut rectangle.approximate_points,
+        }
+    }
+
+    fn relocate(&mut self, delta_x: i64, delta_y: i64) {
+        match self {
+            ObstaclesType::Rectangle(rectangle) => rectangle.relocate(delta_x, delta_y),
         }
     }
 }
@@ -90,6 +99,14 @@ impl Rectangle {
 impl Obstacle for Rectangle {
     fn get_approximate_points(&mut self) -> &mut Vec<line_drawing::Point<i64>> {
         &mut self.approximate_points
+    }
+
+    fn relocate(&mut self, delta_x: i64, delta_y: i64) {
+        self.down_left_point.0 += delta_x;
+        self.down_left_point.1 += delta_y;
+        self.up_right_point.0 += delta_x;
+        self.up_right_point.1 += delta_y;
+        self.approximate_points = vec![self.down_left_point, self.up_right_point];
     }
 }
 
