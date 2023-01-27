@@ -47,16 +47,18 @@ You can find a demonstration of the project on GitHub pages or on [vkabadzhova.x
     - viewport settings: zoom in/out
   
 ## Documentation
-> Note: the official documentation of the project is available only in Bulgarian.
+> Note: the official documentation of the project is available only in Bulgarian. The translation is unofficial.
+
+The official documentation is written in LaTex and can be found [here](https://drive.google.com/file/d/1OVoyD_1qSvfdFf7lj_Z880GoMIcrcszu/view?usp=share_link), the home-brewed translation is available [here](https://drive.google.com/file/d/15Y4aMHqkBHwbQ5CsVRgF_BfI0RH30nvR/view?usp=share_link).
+
 ### What can you find in the documentation?
-The official documentation is written in LaTex and can be found [here](https://www.overleaf.com/read/cwyzrksssdts). 
-- Chapter 1: Research of what is available currently as reards simulating fluid dynamics;
-- Chapter 2: Selection of the technologies, the programming language, and the algorithms;
+- Chapter 1: Available research on the topic of simulating fluid dynamics;
+- Chapter 2: Selecting the technology stack - the programming language and algorithms;
 - Chapter 3: Implementation details;
 - Chapter 4: User guide.
-  
+
 ## Technical Documentation
-Typically, using the Rust's packet manager `Cargo` a technical documentation can be generated via `cargo d` or `cargo d --open` if you want to open it directly. You can also find it in the Github Pages of the current project or at [vkabadzhova.xyz](vkabadzhova.xyz).
+Typically, using the Rust's packet manager `Cargo` a technical documentation can be generated via `cargo d` or `cargo d --open` if you want to open it directly. 
 
 ## Vision
 The project as it is now is not production ready. It is designed on the grounds of educational interest in the field of computar graphics and the Rust programming language. In case you wish to contribute, please, feel free to do so by first reading the `CONTRIBUTING.md` file.
