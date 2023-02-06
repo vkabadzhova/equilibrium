@@ -9,6 +9,11 @@
   <a href="https://github.com/vkabadzhova/equilibrium/blob/main/LICENSE"><img src="https://img.shields.io/github/license/vkabadzhova/equilibrium.svg"></a>
 </div>
 
+--------------
+The official thesis paper (in Bulgarian) can be found [here](https://drive.google.com/file/d/1OVoyD_1qSvfdFf7lj_Z880GoMIcrcszu/view?usp=share_link), and the "home-brewed" translation is available [here](https://drive.google.com/file/d/15Y4aMHqkBHwbQ5CsVRgF_BfI0RH30nvR/view?usp=share_link).
+
+
+--------------
   
 > A CPU-processed and grid-based fluid simulator built for my diploma thesis.
   
