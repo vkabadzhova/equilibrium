@@ -14,6 +14,8 @@ pub struct ObstacleWidget {
     /// The obstacles' color in the scene
     pub color: Color32,
     last_obstacle_id: u32,
+    /// Enable animation of obstacles
+    pub animate_obstacles_using_game_of_life: bool,
 }
 
 impl Default for ObstacleWidget {
@@ -23,6 +25,7 @@ impl Default for ObstacleWidget {
             obstacles: vec![ObstacleLayout::default()],
             color: egui::Color32::RED,
             last_obstacle_id: 0,
+            animate_obstacles_using_game_of_life: false,
         }
     }
 }
@@ -61,17 +64,28 @@ impl super::View for ObstacleWidget {
         ui.end_row();
 
         ui.separator();
+        ui.checkbox(
+            &mut self.animate_obstacles_using_game_of_life,
+            "Enable animation with Conway's Game of Life",
+        )
+        .on_hover_text(
+            "Uncheck to disable the widget so you could inspect the simulation securely.",
+        );
+        ui.separator();
 
         ui.label("Obstacles:");
 
-        for obstacle in self.obstacles.iter_mut() {
-            CollapsingHeader::new(obstacle.name.clone())
-                .default_open(false)
-                .show(ui, |ui| obstacle.ui(ui));
-        }
+        // Add obstacles manually iff animation is not enabled.
+        if !self.animate_obstacles_using_game_of_life {
+            for obstacle in self.obstacles.iter_mut() {
+                CollapsingHeader::new(obstacle.name.clone())
+                    .default_open(false)
+                    .show(ui, |ui| obstacle.ui(ui));
+            }
 
-        if ui.button("+").clicked() {
-            self.add_obstacle();
+            if ui.button("+").clicked() {
+                self.add_obstacle();
+            }
         }
 
         self.obstacles.retain(|el| el.action == Action::Keep);

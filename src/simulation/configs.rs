@@ -23,7 +23,11 @@ impl Default for SimulationConfigs {
 
 impl SimulationConfigs {
     /// Creates new SimulationConfigs struct
-    pub fn new(delta_t: f32, frames: i64, fluid_container_size: u32) -> Self {
+    pub fn new(
+        delta_t: f32,
+        frames: i64,
+        fluid_container_size: u32,
+    ) -> Self {
         SimulationConfigs {
             delta_t,
             frames,
